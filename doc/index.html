@@ -5,6 +5,8 @@
 
 <h2>Introduction</h2>
 
+<strong>Note:</strong> <em>This document describes a planned programming language, but will also eventually serve as a tutorial or reference of sorts.  As a result, anywhere where the writing suggests that Lope does something, mentally replace it with "will do".</em>
+
 <p>Lope is a general-purpose programming language, with a particular emphasis on mobile and distributed systems.  It is loosely based on the <a href="http://www.cl.cam.ac.uk/~rm135/uam-theme.html">Bigraphs</a> formalism, and owes an ideological debt to the <a href="http://www.itu.dk/research/theory/bpl">Bigraphical Programming Languages</a> project.</p>
 
 <p>The fundamental unit of computation within Lope is the <em>reaction</em>.  A reaction is expressed as a rule of the form <em>r --> r'</em>, where <em>r</em> is the <em>redex</em> and <em>r'</em> the <em>reactum</em>.  This corresponds to the rule <em>if any part of the system matches the pattern defined by r, replace it with r'</em>.  This is suitably powerful to express many kinds of computation.</p>
@@ -58,10 +60,10 @@
 
 <pre>
 ...
-Train2 has left Holborn station
-Train2 has entered RussellSquare station
-Train2 has left RussellSquare station
-Train1 is being held at KingsCross station
+West train has left KingsCross station
+East train has entered RussellSquare station
+West train has entered RussellSquare station
+East train has left RussellSquare station
 ...
 </pre>
 
@@ -89,10 +91,54 @@ Train1 is being held at KingsCross station
 
 <img src="images/london_underground.png" alt="A Lope representation of the London Underground"/>
 
+<p>This is an idealised London Underground (largely because it only has three stations, which would make for absurdly short travel times), with one east-bound and one west-bound train only.  The "E" blocks at each end are some sort of mysterious zones into which trains disappear and never come back (otherwise known as 'the rest of the London Underground').  Now we need some reaction rules to give it behaviour!</p>
 
+<h5>Rule 1: WestStationTrain</h5>
+<p>This rule allows a train that is in a station to move into an empty tunnel, going west:</p>
 
-<p>
+<img src="images/west_station_train.png" alt="WestStationTrain reaction rule"/>
 
+<p>Some explanation might be required.  The first thing to notice is that our reaction rule is expressed as a bigraph.  This will come in handy later when we start to dynamically generate new reaction rules and modify our existing rules.  Second, notice that we leave out a lot of information from the original model.  We only need to include enough information to obtain a match, and only enough to allow us to access (and manipulate) the nodes that are of interest to us.  Anything that is matched in the redex will be replaced with the reactum, leaving anything that was not mentioned in the redex untouched.  The effect of matching something in the redex and not mentioning it in the reactum (as we do with our timer signal, <em>GE</em>) is to delete it.</p>
+
+<p>This rule relies on the timer behaviour described earlier.  It will not fire until the timer reaction rules place a "GW" node inside the current node, at which point the train is allowed to leave the station.  If the GE node is absent, or if the tunnel is not empty, the train will not be allowed to leave the tstation.</p>
+
+<h5>Rule 2: WestTunnelTrain</h5>
+<p>This rule allows a train to move from a tunnel into an empty station once the tunnel timer fires.</p>
+
+<img src="images/west_tunnel_train.png" alt="WestTunnelTrain reaction rule"/>
+
+<p>The <em>$X : Station</em> and <em>$t : Train</em> syntax is a way of matching on types in reaction rules.  <em>$X : Station</em> will match <em>any</em> node of type <em>Station</em>, and $X any subsequent occurences of $X in the reactum will be replaced by the matched node.</p>
+
+<p><strong>Note:</strong> The way in which the "IO" node is used in these examples is something of an over-simplification so as to keep the graphical notation readable and simple.  The exact graphical representation of IO elements will be explained after the textual representation of Lope programs is introduced.</p>
+
+<h5>Rule 3: WestTerminateTrain</h5>
+
+<p>We need one final rule, which dictates that a train that reaches the end of the line disappears into nothingness, and then reappears back at the other end of the line in the same instant (i.e. trains wrap around).</p>
+
+<img src="images/west_terminate_train.png" alt="WestTerminateTrain reaction rule"/>
+
+<p>Obviously we have only encoded rules for traveling in one direction (west).  We would need to construct rules for east-bound trains in much the same way.  The introduction of a textual description will allow us to produce a fully parameterised version of this same program, where a single rule can suffice to describe the behaviour of both east- and west-bound trains.  For argument's sake, assume we have manually constructed the corresponding set of rules for east-bound trains.</p>
+
+<h2>What's the point?</h2>
+
+<p>Hopefully the graphical representations and examples have given you you some sense of the "flavour" of Lope programming.  There are a few reasonably interesting observations we can make at this point:
+
+<ul>
+<li>Pretty much everything is a lope-style bigraph.  This vaguely corresponds to the Lisp-esque idea of code-as-data, however I like to think that this goes further while still making it reasonably easy to mentally store a model of the system.</li>
+<li>These graphical representations should be reasonably straight-forward to generate programmatically from program text, which might prove a useful aid in debugging and general system documentation and understanding.  Similarly, for fans of visual programming languages, it should be possible to go the other way as well.</li>
+<li>There is a very vague hint of logic programming flavour mixed in here.  I haven't yet thought a lot about what the implications of this might be, but I think it could be an interesting direction.</li>
+<li>It is possible to encode something like the Lambda calculus inside these Lope-style bigraphs in a reasonably straightforward way.  Similarly, it should be reasonably evident that having done that, there would be no barriers to implementing the entire expression language (e.g. arithmetic, strings, lists etc) as nodes within a bigraph, with corresponding evaluation rules.</li>
+<li>Code generation and compilation could be expressed as bigraphs too.  My hope is to implement a self-hosting Lope.</li>
+<li>Because we have both locality and connectivity information, it becomes easier (although not necessarily 'easy') to derive parallel and distributed code from Lope programs.  Processes can be truly mobile and context-aware with no extra work.</li>
+<li>Because bigraphs have a strong mathematical formalism, providing I haven't broken too many rules in changing my interpretation of a bigraph, it should still be possible to do all the sorts of verification and safety-checking that is possible within the theory of bigraphs.</li>
+<li>This all looks very dynamic, but it's actually not.  I'd like to investigate the possibility of making a theorem prover available to the compiler so as to verify optimisations and do static elaboration of various constructs.  If this works, then it should be possible to do verified optimisations and generate reasonably efficient native code.</li>
+<li>Failure tolerance becomes reasonably straightforward - you create a reaction rule that matches against certain types of "brokeness" that you can deal with, and then that rule updates other reaction rules (and possibly the bigraph too) to work around that brokeness.</li>
+<li>Context-aware services are simple!  You setup some context-defining reaction rules that check for the presence of a certain set of conditions in the current context and then configure all of the other reaction rules appropriately (e.g. adding or removing certain functionality, or emulating unsupported functionality using other features available in the current context).</li>
+</ul>
+
+<h2>Textual Representation</h2>
+
+<p>[In progress]</p>
 
 </body>
 </html>
