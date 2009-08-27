@@ -241,8 +241,8 @@ pb.child1.name ---> "" : string
 station : Station (intervalW, intervalE) &lt;wTL,wTR,eTL,eTR&gt; {
 	Timer($intervalW, GW};
 	Timer($intervalE, GE};
-	$platformWest;
-	$platformEast;
+	$West;
+	$East;
 }
 
 tunnel : Tunnel (travelTime) &lt;L,R&gt; {
@@ -271,6 +271,165 @@ Underground {
 	link wt2&lt;L&gt; - Holborn&lt;wTR&gt;;
 	link et2&lt;L&gt; - Holborn&lt;eTR&gt;;
 	link W - Holborn&lt;wTL,eTL&gt;;
+}
+</pre>
+
+<p>While the example above uses <em>named</em> links, for our purposes we do not need them, so the example is presented again using anonymous links.  The behaviour of the <em>link</em> keyword differs for anonymous links.  The standard syntax <em>link Bigraph1 - Bigraph2</em> will link the first <em>n</em> links together, where <em>n</em> is the smaller number of unconnected links on either bigraph.  The effect of adding a subscript (e.g. <em>link Bigraph1&lt;2&lt; - Bigraph2</em>) is to limit the value of $n$.</p>
+
+<pre>
+Underground {
+	station : Station (intervalW, intervalE) &lt;4&gt; {
+	        Timer($intervalW, GW};
+	        Timer($intervalE, GE};
+	        $West;
+	        $East;
+	}
+
+	tunnel : Tunnel (travelTime,direction) &lt;2&gt; {
+	        Timer($travelTime);
+	        $tunnelTrain;
+	}
+
+	train : Train (direction) {
+		$direction;
+	}
+
+        E &lt;2&gt;;
+        KingsCross = station(30,25);
+        wt1 = tunnel(10,West);
+        et1 = tunnel(15,East);
+        RussellSquare = station(25,45);
+        wt2 = tunnel(30,West);
+        et2 = tunnel(25,East);
+        Holborn = station(15,20);
+        W &lt;2&gt;;
+
+        link E - KingsCross;
+        link KingsCross<1> - wt1;
+        link KingsCross<1> - et1;
+        link wt1 - RussellSquare;
+        link et1 - RussellSquare;
+        link RussellSquare&lt;1&gt; - wt2;
+        link RussellSquare&lt;1&gt; - et2;
+        link wt2 - Holborn;
+        link et2 - Holborn;
+        link W - Holborn;
+
+	// Insert our trains into the platform sites.
+	KingsCross.West = train (West);
+	Holborn.East = train (East);
+}
+</pre>
+
+
+<h3>Reaction Rules</h3>
+
+<p>Reaction rules are just bigraphs, and so their specification mostly follows from the syntax already used up to this point.  The only difference is that we provide a convenience <em>reaction</em> keyword that provides a cue to those reading Lope programs that there is additional behaviour associated with these particular bigraphs.</p>
+
+<pre>
+reaction WestStationTrain { 
+	redex { _ : Station { 
+			GW;
+			$tr : Train
+		} &lt;-&gt; _ : Tunnel {
+			West;
+			{}
+		}
+ 	} 
+	reactum { _ : Station {
+			{}
+        	} &lt;-&gt; _ : Tunnel {
+			West;
+			$tr
+	     	}
+	}
+}
+
+</pre>
+
+<p>The 'X &lt;-&gt; Y' link operator is a convenience shorthand for 'link X<1> - Y', indicating that there exists a link between the bigraphs on the left and right hand side.  The wildcard ('_') may be used in place of explicit variable-based matching where it is unambiguous to do so.  Ambiguous use of wildcards will result in a compile error.  Use of wildcards is unambiguous if the same types appear in the same nested order, for example:</p>
+
+<pre>
+redex:
+_ : X {
+	_ {
+		_ : Z {}
+	  }
+}
+
+reactum:
+_ : X {
+	Foo;
+	_ {
+		_ : Z {}
+	  }
+}
+</pre>
+
+<p>Reaction rules are parameterisable just as any other bigraph is, so we can rewrite this example to be generic for any direction of travel, and then we can instantiate the rule for east-bound and west-bound trains:</p>
+
+<pre>
+StationTrain (direction) { 
+        redex { _ : Station { 
+                        GW;
+                        $tr : Train { $direction }
+                } &lt;-&gt; _ : Tunnel {
+                        $direction;
+                        {}
+                }
+        } 
+        reactum { _ : Station {
+                        {}
+                } &lt;-&gt; _ : Tunnel {
+                        $direction;
+                        $tr
+                }
+        }
+}
+
+reaction WestStationTrain (West);
+reaction EastStationTrain (East);
+</pre>
+
+<h2>General-Purpose Programming Examples</h2>
+
+<p>So far the running example has been a simulation task, which ignores some of the programming-in-the-small features of Lope.  This section will contain a series of traditional general-purpose programming tasks and data structures encoded in the Lope style.  First though, we introduce an additional construct that provides a useful short-hand:</p>
+
+<pre>
+fun f x = E
+fn x => E
+</pre>
+
+<p>The effect of <em>fun</em> is a little subtle.  While it is supposed to provide a very familiar notion of introducing a function named 'f' into the current environment, its real effect is to introduce a specialised type and corresponding reaction rules.  You can assume that there is an encoding of something corresponding to the Lambda-calculus inside Lope, and the 'fun' keyword is a means of hiding this complexity and avoiding the need for the programmer to deal with binding and scope rules.  In brief, a function like:</p>
+
+<pre>fun addTwo x = x + 2</pre>
+
+<p>Actually decomposes into a bigraph:</p>
+
+<img src="images/expression_addtwo.png" alt="Expression bigraph"/>
+
+<p>Application of the function (e.g. <em>f(10)</em>) is also a bigraph, with an accompanying reaction rule:</p>
+
+<img src="images/expression_apply.png" alt="Function application"/>
+
+<p>The reaction rule for applied functions is invoked at that point and appropriate substitution happens, allowing eventual reduction to a result:</p>
+
+<img src="images/expression_plus.png" alt="Application of Plus reaction rule"/>
+
+<p>So after all the rules have been applied, a single bigraph consisting of the result of evaluating the function application is left in the same context as the original function application.  In real implementation terms, we may "hard code" reaction rules for arithmetic operations and such in order to make use of built-in hardware functionality more efficiently.</p>
+
+<h3>Lists</h3>
+
+<pre>
+List {
+	Nil;
+
+	Cons (h,t) {
+		hd { $h };
+		tl { $t }
+	};
+
+	
 }
 </pre>
 
