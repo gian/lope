@@ -416,7 +416,21 @@ fn x => E
 
 <img src="images/expression_plus.png" alt="Application of Plus reaction rule"/>
 
-<p>So after all the rules have been applied, a single bigraph consisting of the result of evaluating the function application is left in the same context as the original function application.  In real implementation terms, we may "hard code" reaction rules for arithmetic operations and such in order to make use of built-in hardware functionality more efficiently.</p>
+<p>So after all the rules have been applied, a single bigraph that wraps the result of evaluating the function application is left in the same context as the original function application.  In real implementation terms, we may "hard code" reaction rules for arithmetic operations and such in order to make use of built-in hardware functionality more efficiently.</p>
+
+<p>There is a little bit of trickery going on to do with primitive types (e.g. int, string, real and tuple types etc).  Everything in Lope is a bigraph, but sometimes it is convenient to be able to refer to a boxed value (such as an int) within arithmetic expressions without having to manually unbox the value.  For primitive types only, a bigraph containing only a single primitive value will be coerced to the type of that primitive value where appropriate.  For example, <em>MyIntValue { 32 } + 10</em> is equivalent to <em>32 + 10</em> for all intents and purposes.</p>
+
+<h3>Pattern Matching</h3>
+
+<p>We also allow pattern-matching using the same syntax as in redexes - pattern matching actually just introduces a reaction rule for each clause.</p>
+
+<pre>
+fun fact 0 = 1
+  | fact n = n * fact (n-1)
+
+fun treeSum {} = 0
+  | treeSum (tree { left{y}; v; right{z} }) = v + treeSum y + treeSum z
+</pre>
 
 <h3>Lists</h3>
 
@@ -425,11 +439,11 @@ List {
 	Nil;
 
 	Cons (h,t) {
-		hd { $h };
-		tl { $t }
+		($h,$t)
 	};
 
-	
+	fun append Nil l = l 
+          | append (Cons{(h,t)}) l = Cons(h,append(t,l));
 }
 </pre>
 
