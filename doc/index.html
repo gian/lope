@@ -233,5 +233,46 @@ pb.child1.name ---> "" : string
 
 <p>These are essentially just macros, and are not modifiable.</p>
 
+<h3>Links</h3>
+
+<p>Links can be named or anonymous:</p>
+
+<pre>
+station : Station (intervalW, intervalE) &lt;wTL,wTR,eTL,eTR&gt; {
+	Timer($intervalW, GW};
+	Timer($intervalE, GE};
+	$platformWest;
+	$platformEast;
+}
+
+tunnel : Tunnel (travelTime) &lt;L,R&gt; {
+	Timer($travelTime);
+	$tunnelTrain;
+}
+
+Underground {
+	E &lt;westLine,eastLine&gt;;
+	KingsCross = station(30,25);
+	wt1 = tunnel(10);
+	et1 = tunnel(15);
+	RussellSquare = station(25,45);
+	wt2 = tunnel(30);
+	et2 = tunnel(25);
+	Holborn = station(15,20);
+	W &lt;westLine,eastLine&gt;;
+
+	link E - KingsCross&lt;wTR,eTR&gt;;
+	link KingsCross&lt;wTL&gt; - wt1&lt;R&gt;;
+	link KingsCross&lt;eTL&gt; - et1&lt;R&gt;;
+	link wt1&lt;L&gt; - RussellSquare&lt;wTR&gt;;
+	link et1&lt;L&gt; - RussellSquare&lt;eTR&gt;;
+	link RussellSquare&lt;wTL&gt; - wt2&lt;R&gt;;
+	link RussellSquare&lt;eTL&gt; - et2&lt;R&gt;;
+	link wt2&lt;L&gt; - Holborn&lt;wTR&gt;;
+	link et2&lt;L&gt; - Holborn&lt;eTR&gt;;
+	link W - Holborn&lt;wTL,eTL&gt;;
+}
+</pre>
+
 </body>
 </html>
