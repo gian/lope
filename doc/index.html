@@ -101,9 +101,9 @@ East train has left RussellSquare station
 
 <img src="images/west_station_train.png" alt="WestStationTrain reaction rule"/>
 
-<p>Some explanation might be required.  The first thing to notice is that our reaction rule is expressed as a bigraph.  This will come in handy later when we start to dynamically generate new reaction rules and modify our existing rules.  Second, notice that we leave out a lot of information from the original model.  We only need to include enough information to obtain a match, and only enough to allow us to access (and manipulate) the nodes that are of interest to us.  Anything that is matched in the redex will be replaced with the reactum, leaving anything that was not mentioned in the redex untouched.  The effect of matching something in the redex and not mentioning it in the reactum (as we do with our timer signal, <em>GE</em>) is to delete it.</p>
+<p>Some explanation might be required.  The first thing to notice is that our reaction rule is expressed as a bigraph.  This will come in handy later when we start to dynamically generate new reaction rules and modify our existing rules.  Second, notice that we leave out a lot of information from the original model.  We only need to include enough information to obtain a match, and only enough to allow us to access (and manipulate) the nodes that are of interest to us.  Anything that is matched in the redex will be replaced with the reactum, leaving anything that was not mentioned in the redex untouched.  The effect of matching something in the redex and not mentioning it in the reactum (as we do with our timer signal, <em>GW</em>) is to delete it.</p>
 
-<p>This rule relies on the timer behaviour described earlier.  It will not fire until the timer reaction rules place a "GW" node inside the current node, at which point the train is allowed to leave the station.  If the GE node is absent, or if the tunnel is not empty, the train will not be allowed to leave the tstation.</p>
+<p>This rule relies on the timer behaviour described earlier.  It will not fire until the timer reaction rules place a "GW" node inside the current node, at which point the train is allowed to leave the station.  If the GW node is absent, or if the tunnel is not empty, the train will not be allowed to leave the tstation.</p>
 
 <h5>Rule 2: WestTunnelTrain</h5>
 <p>This rule allows a train to move from a tunnel into an empty station once the tunnel timer fires.</p>
@@ -369,26 +369,27 @@ _ : X {
 <p>Reaction rules are parameterisable just as any other bigraph is, so we can rewrite this example to be generic for any direction of travel, and then we can instantiate the rule for east-bound and west-bound trains:</p>
 
 <pre>
-StationTrain (direction) { 
-        redex { _ : Station { 
-                        GW;
+StationTrain (direction,token) { 
+        redex { $st : Station { 
+                        $token;
                         $tr : Train { $direction }
                 } &lt;-&gt; _ : Tunnel {
                         $direction;
                         {}
                 }
         } 
-        reactum { _ : Station {
+        reactum { $st : Station {
                         {}
                 } &lt;-&gt; _ : Tunnel {
                         $direction;
                         $tr
-                }
+                };
+		print ($direction.name + " train has left " + $st.name + " station")
         }
 }
 
-reaction WestStationTrain (West);
-reaction EastStationTrain (East);
+reaction WestStationTrain (West,GW);
+reaction EastStationTrain (East,GE);
 </pre>
 
 <h2>General-Purpose Programming Examples</h2>
@@ -397,7 +398,7 @@ reaction EastStationTrain (East);
 
 <pre>
 fun f x = E
-fn x => E
+fn x =&gt; E
 </pre>
 
 <p>The effect of <em>fun</em> is a little subtle.  While it is supposed to provide a very familiar notion of introducing a function named 'f' into the current environment, its real effect is to introduce a specialised type and corresponding reaction rules.  You can assume that there is an encoding of something corresponding to the Lambda-calculus inside Lope, and the 'fun' keyword is a means of hiding this complexity and avoiding the need for the programmer to deal with binding and scope rules.  In brief, a function like:</p>
@@ -452,30 +453,29 @@ List {
 <h3>Prime Sieve</h3>
 
 <pre>
-Primes(n) {
-	range(Canditate,2,$n);	// Built-in, generates nodes below this one for each value 2..$n as Candidate(2), Candidate(3) etc.
-
-
-	Filter(p) = { redex {
-				Candidate($c) where ($c mod $p = 0);
-		      }
-		      reactum { }
+Primes (k) {
+	sieve(n) : sieve <in:int,out:int> {
+		handle $in -&gt; if $in mod $n = 0 then $out &lt;- $in else {};
 	}
 
+	Term <in> {
+		handle $in -&gt; Candidate { $in };
+	}
 
-	PrimeSelect = { redex {
-				Candidate($x); 
-				$this
-			} 
-			reactum {
-				Prime($x);
-				reaction Filter($x);
-			} 
-		      };
+	reaction extend {
+		redex { $s : sieve <-> Term { Candidate { $c } } }
+		reactum { $s <-> Sieve($c) <-> Term {} }
+	}
 
-	reaction PrimeSelect;
+	s2 = sieve(2);
+	t = Term;
+
+	link s2<out> - t<in>;
+
+	gen = Int.seq(3,$k);	// seq is a built-in that will generate integers from 3..$k on a port
+
+	link gen - s2;
 }
-
 </pre>
 
 
