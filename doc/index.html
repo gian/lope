@@ -1,5 +1,8 @@
 <html>
 <head><title>Lope Programming Language - Design and Rationale</title</head>
+<style>
+pre { background: rgb(225,225,225); padding: 8px; }
+</style>
 <body>
 <h1>Lope Programming Language</h1>
 
@@ -138,7 +141,97 @@ East train has left RussellSquare station
 
 <h2>Textual Representation</h2>
 
-<p>[In progress]</p>
+<p>Because almost everything in Lope is a bigraph, the textual representation is primarily geared towards representation and construction of bigraphs.</p>
+
+<h3>Bigraph Creation</h3>
+
+<p>A bigraph is a first-class object.  The anonymous empty bigraph is represented by:</p>
+
+<pre>
+{}
+</pre>
+
+<p>A bigraph can be anonymous or named:</p>
+
+<pre>
+{ {}; } 		// An anonymous bigraph that contains only the empty (anonymous) bigraph.
+A { B; }	// A bigraph named "A" that contains another (empty) bigraph named "B"
+</pre>
+
+<p>Named parameters become 'sites' within the bigraph.  They appear in the parameter list without a '$' delimeter, and within the body of the bigraph with a '$' delimeter:</p>
+
+<pre>
+A (x,y) {
+	$x;
+	B($y);
+};
+</pre>
+
+<p>The treatment of types may be somewhat unfamiliar to users of other programming languages.  A type annotation may be attached to any name or value:</p>
+
+<pre>
+B(l : string) {
+	C($l);
+}
+
+A : SomeType (x : int, y : string) {
+	$x;
+	B($y);
+}
+</pre>
+
+<p>Lope features strong typing and type inference.  In this case, the type of the parameter to B will be enforced (e.g. passing an integer would be an error).  It is possible to leave type annotations off terms where the type can be reconstructed unambiguously:</p>
+
+<pre>
+B(l) {
+	C($l);
+}
+
+A : SomeType (x, y) {
+	$x;
+	B($y);
+}
+
+A(10,"abc");
+</pre>
+
+<p>A limited form of polymorphism is available - the implementation of this would be familiar to ML users.  Basically, where no type constraints are placed upon a parameter, it will be generalised to a type variable (<em>'a, 'b, ...</em>) which acts as a 'place holder' for exactly one type.  For example:</p>
+
+<pre>
+PolymorphicBigraph (x,y) {
+	$x;
+	$y;
+}
+</pre>
+
+<p>The type of <em>PolymorphicBigraph</em> will be <em>'a * 'b -> PolymorphicBigraph {'a; 'b}</em>.  The '*' notation describes a tuple of values, that is, the type of <em>(x,y)</em> is <em>'a * 'b</em>.  The arrow (<em>-&gt;</em>) is used to separate inputs from outputs (the input is on the left hand side, and the output type is on the right hand side).  So far, this is all ordinary ML-style type notation.  The output type, however, is unlike anything seen in ML.</p>
+
+<p>Because we have not provided a type annotation for <em>PolymorphicBigraph</em>, a new, unique type is automatically instantiated for it (<em>PolymorphicBigraph {a; b}</em>).  The only value that inhabits this type is <em>PolymorphicBigraph</em> itself.  The final piece of notation (<em>{'a; 'b}</em>) indicates the internal structure of PolymorphicBigraph as it is now.  <em>PolymorphicBigraph {int; string}</em> would be a valid instantiation to concrete types (i.e., the instantiated type may be substituted for the uninstantiated type in all cases - they the the same type in some sense), however <em>PolymorphicBigraph {'a; 'b}</em> is a distinct type from <em>PolymorphicBigraph {'a; 'b; 'c}</em>.</p>
+
+<p>While no computation on types is permitted (i.e. dynamic 'reflection-style' features are forbidden), there is a simple mechanism for using the types of bigraphs within other type expressions:</p>
+
+<pre>
+OtherBigraph (p,q) {
+	$p;
+	$q;
+} : PolymorphicBigraph.type
+</pre>
+
+<p>This is purely syntactic sugar for writing the type <em>'a * 'b -&gt; PolymorphicBigraph {'a; 'b}</em> in full.  It is enforced at compile time, and if PolymorphicBigraph is subsequently updated (to <em>PolymorphicBigraph {'a; 'b; 'c}</em>, for example), <em>OtherBigraph</em> will retain the original type.</p>
+
+<p>There are a few standard values that are accessible on all bigraphs (<em>---&gt;</em> just means 'evaluates to' in this context, and is not a Lope construct):</p>
+
+<pre>
+pb = PolymorphicBigraph("x",123);
+
+pb.name ---> "pb"
+pb.type ---> PolymorphicBigraph {string; int}
+pb.child1 ---> "x" : string
+pb.child2 ---> 123 : int
+pb.child1.name ---> "" : string
+</pre>
+
+<p>These are essentially just macros, and are not modifiable.</p>
 
 </body>
 </html>
