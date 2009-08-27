@@ -444,8 +444,41 @@ List {
 
 	fun append Nil l = l 
           | append (Cons{(h,t)}) l = Cons(h,append(t,l));
+
+	myList = append([1,2,3],[4,5,6])
 }
 </pre>
+
+<h3>Prime Sieve</h3>
+
+<pre>
+Primes(n) {
+	range(Canditate,2,$n);	// Built-in, generates nodes below this one for each value 2..$n as Candidate(2), Candidate(3) etc.
+
+
+	Filter(p) = { redex {
+				Candidate($c) where ($c mod $p = 0);
+		      }
+		      reactum { }
+	}
+
+
+	PrimeSelect = { redex {
+				Candidate($x); 
+				$this
+			} 
+			reactum {
+				Prime($x);
+				reaction Filter($x);
+			} 
+		      };
+
+	reaction PrimeSelect;
+}
+
+</pre>
+
+
 
 </body>
 </html>
