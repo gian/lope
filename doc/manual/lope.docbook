@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.4//EN" [
+  <!ENTITY lope "<productname>Lope</productname>">
+]>
+ 
+<book lang="en">
+ 
+<bookinfo>
+<title>&lope; Programming Language Manual</title>
+<authorgroup>
+<author>
+<firstname>Gian</firstname>
+<surname>Perrone</surname>
+</author>
+</authorgroup>
+
+<date>1 September 2009</date>
+<releaseinfo>0.1</releaseinfo>
+</bookinfo>
+ 
+<chapter id="introduction">
+<title>Introduction</title>
+ 
+<para>The &lope; Programming Language</para>
+ 
+</chapter>
+
+<chapter id="syntax">
+<title>&lope; Syntax</title>
+
+<para>A description of &lope;'s syntax.</para>
+
+</chapter>
+
+<chapter id="semantics">
+<title>&lope; Semantics</title>
+
+<para>A description of &lope;'s semantics.</para>
+
+</chapter>
+
+<chapter id="mobility">
+<title>Mobility and Ubiquity</title>
+
+<para>A description of &lope;'s features for process mobility and ubiquitous computing.</para>
+
+</chapter>
+
+
+
+
+</book>
+
+
