@@ -4,23 +4,22 @@
  *****************************************************************************)
 signature BIGRAPH =
 sig
-  datatype 'a node = Node of 'a * 'a node list
+  type label
+  type ty
+
+  datatype 'a bigraph = Bigraph of 'a node ref
+       and 'a node = Node of {control : 'a, children : 'a bigraph list, links : 'a  * 'a bigraph list}
                    | Site of 'a
 
-  datatype 'a link = Link of 'a node ref * 'a node ref
-
-  type 'a bigraph = 'a node list * 'a link list
-
-  datatype node_op = Add
-                   | Mult
-	 	   | Div
-		   | Sub
- 
-  datatype node_data = DataNode of data_node_type
-                     | OpNode of node_data node * node_op * node_data node
-		     | NameNode of string * node_data node
-   
+  datatype lope_control = NodeControl of label * ty
+                        | LinkControl of label * ty
+                        | AnonControl of ty
+                        | ParamNodeControl of label * ty * ((label * ty) list)
 end
 
-
+structure Bigraph : BIGRAPH =
+struct
+	type label = string
+	type ty = string
+end
 
