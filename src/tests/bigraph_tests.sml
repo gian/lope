@@ -6,18 +6,19 @@ struct
 	fun cname k =
 		(fn (AnonControl t) => t) (control k)
 
-	fun test_add_child () =
+	val tests = [
+	fn () =>
 	let
 		val a = new (AnonControl "foo")
 		val b = new (AnonControl "bar")
 		val _ = add_child a b
 		val b' = hd (children a)
 	in
-		assert ("add_child",a = parent b') ;
-		assert ("add_child", cname b' = "bar")
-	end
+		assert ("add_child1",a = parent b') ;
+		assert ("add_child2", cname b' = "bar")
+	end,
 
-	fun test_siblings () =
+	fn () =>
 	let
 		val a = new (AnonControl "foo")
 		val b = new (AnonControl "child1")
@@ -27,14 +28,27 @@ struct
 		val b' = hd (children a)
 		val s = siblings b'
 	in
-		 assert ("siblings", length s = 1) ;
-		 assert ("siblings", cname (hd s) =
+		 assert ("siblings1", length s = 1) ;
+		 assert ("siblings2", cname (hd s) =
 		    (if cname b' = "child1" then "child2" else "child1"))
-	end
+	end,
 
-	fun run_all_tests () =
-	    (
-		run_test test_add_child ;
-		run_test test_siblings
-	    )
+	fn () =>
+	let
+		val a = new (AnonControl "foo")
+		val b = new (AnonControl "bar")
+		val _ = add_link a "l" "int" b
+		val l1 = link_targets a
+		val l2 = link_targets b
+		val _ = assert("add_link1", length l1 = 1)
+		val _ = assert("add_link2", length l2 = 1)
+		val l1' = hd l1
+		val l2' = hd l2
+	in
+		assert ("add_link3", cname l1' = cname b) ;
+		assert ("add_link4", cname l2' = cname a)
+	end
+	]
+
+	fun run_all_tests () = app run_test tests 
 end
