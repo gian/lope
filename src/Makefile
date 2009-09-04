@@ -1,4 +1,4 @@
 
 all:
-	echo "CM.make \"sources.cm\";\nBigraphTests.run_all_tests();" | sml 
+	echo "CM.make \"sources.cm\";\nLopeTests.run_all_tests();" | sml 
 

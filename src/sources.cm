@@ -1,7 +1,12 @@
 Group is
-$/basis.cm
-$/smlnj-lib.cm
-lib/bigraph.sml
-tests/test.sml
-tests/bigraph_tests.sml
+        frontend/lope.grm
+        frontend/lope.lex
+        frontend/parse.sml
+        lib/bigraph.sml
+        tests/test.sml
+        tests/bigraph_tests.sml
+        tests/lope_tests.sml
+        $/smlnj-lib.cm
+        $/ml-yacc-lib.cm
+        $/basis.cm
 

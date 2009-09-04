@@ -1,0 +1,26 @@
+(* Lope Programming Language *)
+(* Copyright (c) 2009 Gian Perrone *)
+(* gian.perrone at gmail.com *)
+
+structure B = Bigraph
+
+type bigraph = B.lope_control B.bigraph
+
+%%
+
+%name Lope
+
+%term ERROR
+    | EOF
+	  
+%nonterm prog of bigraph
+
+%pos int
+%verbose
+%start prog
+%eop EOF %noshift EOF
+
+%%
+
+prog: 						(B.empty)
+
