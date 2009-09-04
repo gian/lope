@@ -27,6 +27,9 @@ eol=[\n\r];
 %%
 <INITIAL>{ws}*		=> (YYBEGIN LOPE; continue());
 
+<LOPE>"{"		=> (Tokens.LBR(yypos,yypos+1));
+<LOPE>"}"		=> (Tokens.RBR(yypos,yypos+1));
+<LOPE>{ident}	=> (Tokens.IDENT(yytext,yypos,yypos+size yytext));
 <LOPE>"(*"		=> (YYBEGIN COMMENT; continue());
 
 <COMMENT>"*)"		=> (YYBEGIN LOPE; continue());
