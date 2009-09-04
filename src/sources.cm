@@ -1,10 +1,12 @@
 Group is
+        lib/bigraph.sml
+        frontend/errormsg.sml
         frontend/lope.grm
         frontend/lope.lex
         frontend/parse.sml
-        lib/bigraph.sml
         tests/test.sml
         tests/bigraph_tests.sml
+	    tests/parse_tests.sml
         tests/lope_tests.sml
         $/smlnj-lib.cm
         $/ml-yacc-lib.cm
