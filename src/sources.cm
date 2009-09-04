@@ -1,0 +1,7 @@
+Group is
+$/basis.cm
+$/smlnj-lib.cm
+lib/bigraph.sml
+tests/test.sml
+tests/bigraph_tests.sml
+
