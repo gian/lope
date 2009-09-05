@@ -1,5 +1,6 @@
 Group is
         lib/bigraph.sml
+		frontend/parse_tree.sml
         frontend/errormsg.sml
         frontend/lope.grm
         frontend/lope.lex

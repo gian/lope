@@ -20,7 +20,8 @@ fun err(p1,p2) = ErrorMsg.error p1
 
 digits=[0-9]+;
 real=([0-9]+"."[0-9]*)|([0-9]*"."[0-9]+);
-ident=['a-zA-Z_][a-zA-Z0-9_']*;
+ident=['a-zA-Z_][a-zA-Z0-9_'\.]*;
+siteident=\$['a-zA-Z_][a-zA-Z0-9_'\.]*;
 stringlit="\""([^\"]*)"\"";
 ws=[\ \t];
 eol=[\n\r];
@@ -29,7 +30,20 @@ eol=[\n\r];
 
 <LOPE>"{"		=> (Tokens.LBR(yypos,yypos+1));
 <LOPE>"}"		=> (Tokens.RBR(yypos,yypos+1));
+<LOPE>"("		=> (Tokens.LPAR(yypos,yypos+1));
+<LOPE>")"		=> (Tokens.RPAR(yypos,yypos+1));
+<LOPE>":"		=> (Tokens.COLON(yypos,yypos+1));
+<LOPE>";"		=> (Tokens.SEMI(yypos,yypos+1));
+<LOPE>","		=> (Tokens.COMMA(yypos,yypos+1));
+<LOPE>"reaction" => (Tokens.REACTION(yypos, yypos+8));
+<LOPE>"redex" => (Tokens.REDEX(yypos, yypos+5));
+<LOPE>"reactum" => (Tokens.REACTUM(yypos, yypos+7));
+<LOPE>"link" => (Tokens.LINK(yypos, yypos+4));
+<LOPE>"<->" => (Tokens.ILINK(yypos, yypos+3));
+<LOPE>"<" => (Tokens.LT(yypos, yypos+1));
+<LOPE>">" => (Tokens.GT(yypos, yypos+1));
 <LOPE>{ident}	=> (Tokens.IDENT(yytext,yypos,yypos+size yytext));
+<LOPE>{siteident} => (Tokens.SITEIDENT(yytext,yypos,yypos+size yytext));
 <LOPE>"(*"		=> (YYBEGIN COMMENT; continue());
 
 <COMMENT>"*)"		=> (YYBEGIN LOPE; continue());

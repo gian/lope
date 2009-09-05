@@ -9,6 +9,7 @@ sig
 
 
 	exception BigraphStructureException of string
+	exception BigraphLinkException of string
 
 	type 'a node
   	
@@ -18,6 +19,7 @@ sig
 	datatype lope_control = NodeControl of label * ty
                               | AnonControl of ty
                               | ParamNodeControl of label * ty * ((label * ty) list)
+							  | SiteControl of label * ty
 	
 	val empty : 'a bigraph
 
@@ -31,8 +33,9 @@ sig
 	val children : lope_control bigraph -> lope_control bigraph list
 	val siblings : lope_control bigraph -> lope_control bigraph list
 	val links : lope_control bigraph -> (label * ty * lope_control bigraph) list
+	val params : lope_control bigraph -> (label * ty) list
 
-	val new : 'a -> 'a bigraph
+	val new : lope_control -> lope_control bigraph
 	val add_child : lope_control bigraph -> lope_control bigraph -> unit
 	val delete_child : lope_control bigraph -> lope_control bigraph -> unit
 
@@ -40,6 +43,9 @@ sig
 	val add_link : 'a bigraph -> label -> ty -> 'a bigraph -> unit 
 	val link_targets : 'a bigraph -> 'a bigraph list
 	val delete_link : 'a bigraph -> 'a bigraph -> unit
+
+	(* Pretty printer *)
+	val to_string : lope_control bigraph -> string
 
 end
 
@@ -59,6 +65,7 @@ struct
 	datatype lope_control = NodeControl of label * ty
                               | AnonControl of ty
                               | ParamNodeControl of label * ty * ((label * ty) list)
+							  | SiteControl of label * ty
 
 	val empty = Empty
 
@@ -79,13 +86,18 @@ struct
 
 	fun name k = (fn (AnonControl t) => ": " ^ t
                        | (NodeControl (l,t)) => l ^ " : " ^ t
-                       | (ParamNodeControl (l,t,p)) => l ^ " : " ^ t ^ "<...>") 
+                       | (ParamNodeControl (l,t,p)) => l ^ " : " ^ t ^ " (...)"
+					   | (SiteControl (l,t)) => l ^ " : " ^ t ^ " site") 
 				(control k)
 
-	fun new (control : 'a) = Bigraph (ref {control = control, parent = empty, children = [], links = [] : (label * ty * 'a bigraph) list})
+
+	fun params k = (fn (ParamNodeControl (l,t,p)) => p
+	                 | _ => []) (control k)
+
+	fun new (control : lope_control) = Bigraph (ref {control = control, parent = empty, children = [], links = [] : (label * ty * lope_control bigraph) list})
 
 	fun add_child (parent as (Bigraph (p as ref k))) (child as (Bigraph (c as ref l))) =
-		(p := {control = #control k, parent = #parent k, children = child :: #children k, links = #links k} ;
+		(p := {control = #control k, parent = #parent k, children = #children k @ [child], links = #links k} ;
 	         c := {control = #control l, parent = parent, children = #children l, links = #links k})
 	  | add_child _ _ = raise BigraphStructureException ("Attempting to add a child to a non-node bigraph")
 
@@ -117,6 +129,21 @@ struct
 	  | delete_link _ _ = raise BigraphLinkException ("Attempted to delete link from invalid bigraph")
 
 	fun link_targets b = map (fn (l,t,k) => k) (links b)
+
+	fun indent 0 s = s
+      | indent n s = "    " ^ indent (n-1) s
+
+	local
+		fun to_string_h n Empty = ""
+		  | to_string_h n b = 
+		  let
+		  	val mindent = indent n
+		  in
+		  	mindent (name b) ^ " {\n" ^ mindent (String.concatWith "\n" (map (to_string_h (n+1)) (children b))) ^ "\n" ^ mindent "}\n"
+		  end
+	in
+		val to_string = to_string_h 0
+	end
 end
 
 

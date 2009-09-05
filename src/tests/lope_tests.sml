@@ -1,6 +1,11 @@
 structure LopeTests =
 struct
-	fun run_all_tests () =
+	fun run_all_tests () = let
+		val _ =
 		(BigraphTests.run_all_tests ();
 		 ParseTests.run_all_tests ())
+		val _ = print ("\nTotal: " ^ Int.toString (!Test.totalCount) ^ "\nFailures: " ^ Int.toString (!Test.failedCount) ^ "\n")
+		in
+			if (!Test.failedCount) > 0 then raise (Fail (Int.toString (!Test.failedCount) ^ " tests failed")) else ()
+		end
 end

@@ -60,8 +60,8 @@ struct
 		val r = children a
 	in
 		 assert ("delete_child1", length r = 2) ;
-		 assert ("delete_child2", name (hd r) = ": child3") ;
-		 assert ("delete_child3", name (hd (tl r)) = ": child1") ; 
+		 assert ("delete_child2", name (hd r) = ": child1") ;
+		 assert ("delete_child3", name (hd (tl r)) = ": child3") ; 
 		 assert ("delete_child4", parent c = Empty) 
 	end,
 

@@ -3,18 +3,40 @@
 (* gian.perrone at gmail.com *)
 
 structure B = Bigraph
-
-type bigraph = B.lope_control B.bigraph
+structure P = ParseTree
 
 %%
 
 %name Lope
 
-%term ERROR
+%term LBR
+    | RBR
+	| LPAR
+	| RPAR
+	| COLON
+	| SEMI
+	| COMMA
+	| REACTION
+	| REDEX
+	| REACTUM
+	| LINK
+	| ILINK
+	| LT
+	| GT
+	| IDENT of string
+	| SITEIDENT of string
+    | ERROR
     | EOF
 	  
-%nonterm prog of bigraph
-
+%nonterm prog of P.parse_tree
+	   | bigraph of P.parse_tree
+	   | bigraph_list of P.parse_tree list
+	   | control of B.lope_control
+	   | link of P.parse_tree
+	   | link_val of P.link_val
+	   | param_list of (B.label * B.ty) list
+	   | param of B.label * B.ty
+	   | typesig of B.ty
 %pos int
 %verbose
 %start prog
@@ -22,5 +44,39 @@ type bigraph = B.lope_control B.bigraph
 
 %%
 
-prog: 						(B.empty)
+prog: bigraph_list							(P.Node (B.empty, bigraph_list))
+
+bigraph_list: bigraph bigraph_list			(bigraph :: bigraph_list)
+            | 								([])
+
+bigraph: LBR bigraph_list RBR				(P.Node (B.new (B.AnonControl ""), bigraph_list))
+	   | control LBR bigraph_list RBR		(P.Node (B.new (control), bigraph_list))
+       | REACTION IDENT LBR bigraph bigraph	RBR	(P.Node(B.new (B.NodeControl(IDENT,"reaction")),[bigraph1,bigraph2]))
+	   | REDEX LBR bigraph_list RBR			(P.Node (B.new (B.AnonControl("redex")), bigraph_list))
+	   | REACTUM LBR bigraph_list RBR		(P.Node (B.new (B.AnonControl("reactum")), bigraph_list))
+	   | SITEIDENT COLON typesig			(P.Node (B.new (B.SiteControl(SITEIDENT,typesig)), []))
+	   | SITEIDENT 							(P.Node (B.new (B.SiteControl(SITEIDENT,"")), []))
+	   | link								(link)
+
+link: LINK link_val ILINK link_val			(P.Link ("", link_val1, link_val2))
+
+link_val: bigraph							(P.AllInterface bigraph)
+
+control: IDENT COLON typesig LPAR param_list RPAR (B.ParamNodeControl (IDENT,typesig,param_list))
+       | IDENT COLON typesig LPAR RPAR		(B.NodeControl (IDENT, typesig))	
+	   | IDENT LPAR param_list RPAR 		(B.ParamNodeControl (IDENT,"",param_list))
+       | IDENT LPAR RPAR					(B.NodeControl (IDENT, ""))
+       | IDENT COLON typesig				(B.NodeControl (IDENT1, typesig))
+       | IDENT								(B.NodeControl (IDENT, ""))
+	   | COLON typesig						(B.AnonControl typesig)
+	   | 									(B.AnonControl "")
+
+typesig: IDENT typesig						(IDENT ^ " " ^ typesig)
+       | IDENT								(IDENT)
+
+param_list: param COMMA param_list			(param :: param_list)
+          | param							([param])
+
+param: IDENT COLON typesig					((IDENT,typesig))
+     | IDENT								((IDENT, ""))
 
