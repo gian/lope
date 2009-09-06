@@ -26,6 +26,7 @@ sig
                               | AnonControl of ty
                               | ParamNodeControl of label * ty * ((label * ty) list)
 							  | SiteControl of label * ty
+							  | WildControl of ty
 	
 	val empty : 'a bigraph
 
@@ -86,6 +87,7 @@ struct
                               | AnonControl of ty
                               | ParamNodeControl of label * ty * ((label * ty) list)
 							  | SiteControl of label * ty
+							  | WildControl of ty
 
 	val empty = Empty
 
@@ -107,7 +109,8 @@ struct
 	fun name k = (fn (AnonControl t) => ": " ^ t
                        | (NodeControl (l,t)) => l ^ " : " ^ t
                        | (ParamNodeControl (l,t,p)) => l ^ " : " ^ t ^ " (...)"
-					   | (SiteControl (l,t)) => l ^ " : " ^ t ^ " site") 
+					   | (SiteControl (l,t)) => l ^ " : " ^ t ^ " site" 
+					   | (WildControl t) => "_ : " ^ t)
 				(control k)
 
 	local
@@ -139,7 +142,6 @@ struct
 
 	fun insert_name Empty n v = raise BigraphNameException ("Cannot insert name '" ^ n ^ "' into empty bigraph!") 
 	  | insert_name b n v = (print ("INSERT: " ^ n ^ " into " ^ (name b) ^ "\n"); Symtab.insert (symtab b) n v)
-
 
 	fun add_child (parent as (Bigraph (p as ref k))) (child as (Bigraph (c as ref l))) =
 		let

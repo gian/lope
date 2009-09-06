@@ -23,6 +23,7 @@ structure P = ParseTree
 	| ILINK
 	| LT
 	| GT
+	| WILDCARD
 	| INT of int
 	| IDENT of string
 	| SITEIDENT of string
@@ -85,6 +86,8 @@ control: IDENT COLON typesig LPAR param_list RPAR (B.ParamNodeControl (IDENT,typ
        | IDENT COLON typesig				(B.NodeControl (IDENT1, typesig))
        | IDENT								(B.NodeControl (IDENT, ""))
 	   | COLON typesig						(B.AnonControl typesig)
+	   | WILDCARD							(B.WildControl "")
+	   | WILDCARD COLON typesig				(B.WildControl typesig)
 	   | 									(B.AnonControl "")
 
 typesig: IDENT typesig						(IDENT ^ " " ^ typesig)

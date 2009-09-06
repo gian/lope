@@ -35,6 +35,7 @@ eol=[\n\r];
 <LOPE>":"		=> (Tokens.COLON(yypos,yypos+1));
 <LOPE>";"		=> (Tokens.SEMI(yypos,yypos+1));
 <LOPE>","		=> (Tokens.COMMA(yypos,yypos+1));
+<LOPE>"_"		=> (Tokens.WILDCARD(yypos,yypos+1));
 <LOPE>"reaction" => (Tokens.REACTION(yypos, yypos+8));
 <LOPE>"redex" => (Tokens.REDEX(yypos, yypos+5));
 <LOPE>"reactum" => (Tokens.REACTUM(yypos, yypos+7));
