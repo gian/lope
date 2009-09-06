@@ -1,0 +1,4 @@
+structure Types =
+struct
+	
+end
