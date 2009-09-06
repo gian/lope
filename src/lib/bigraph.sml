@@ -5,14 +5,18 @@
 signature BIGRAPH =
 sig
 	type label
-	type ty
+	datatype ty = TyTuple of ty list
+	            | TyCon of ty * ty
+				| TyName of string
+				| TyPoly of string
+				| TyUnknown
+				| TyVar of int
 
 	exception BigraphStructureException of string
 	exception BigraphLinkException of string
 	exception BigraphNameException of string
 
 	type 'a node
-  
 
 	datatype link_face = NamedFace of label
 	                   | TypedFace of ty
@@ -23,15 +27,21 @@ sig
                             | Empty
 
 	datatype lope_control = NodeControl of label * ty
-                              | AnonControl of ty
-                              | ParamNodeControl of label * ty * ((label * ty) list)
-							  | SiteControl of label * ty
-							  | WildControl of ty
+                          | AnonControl of ty
+                          | ParamNodeControl of label * ty * ((label * ty) list)
+						  | SiteControl of label * ty
+						  | WildControl of ty
+						  | DataControl of lope_data
+		 and lope_data	  = IntData of int
+		                  | StringData of string
+						  | VarData of label * ty
+						  | UnitData
 	
 	val empty : 'a bigraph
 
 	val unbox : lope_control bigraph -> lope_control node
 
+	val ty_name : ty -> string
 	val name : lope_control bigraph -> string
 
 	(* Accessors *)
@@ -54,6 +64,7 @@ sig
 
 	(* Names *)
 	val get_name : lope_control bigraph -> label -> lope_control bigraph
+	val insert_name : lope_control bigraph -> label -> lope_control bigraph -> unit
 
 	(* Pretty printer *)
 	val to_string : lope_control bigraph -> string
@@ -63,7 +74,12 @@ end
 structure Bigraph : BIGRAPH =
 struct
 	type label = string
-	type ty = string
+	datatype ty = TyTuple of ty list
+	            | TyCon of ty * ty
+				| TyName of string
+				| TyPoly of string
+				| TyUnknown
+				| TyVar of int
 
 	exception BigraphStructureException of string
 	exception BigraphLinkException of string
@@ -84,15 +100,19 @@ struct
 
 
 	datatype lope_control = NodeControl of label * ty
-                              | AnonControl of ty
-                              | ParamNodeControl of label * ty * ((label * ty) list)
-							  | SiteControl of label * ty
-							  | WildControl of ty
-
+                          | AnonControl of ty
+                          | ParamNodeControl of label * ty * ((label * ty) list)
+						  | SiteControl of label * ty
+						  | WildControl of ty
+						  | DataControl of lope_data
+		 and lope_data	  = IntData of int
+		                  | StringData of string
+						  | VarData of label * ty
+						  | UnitData
 	val empty = Empty
 
 	fun unbox (Bigraph (ref b)) = b
-          | unbox _ = raise (BigraphStructureException "Attempted to unbox empty bigraph")
+      | unbox _ = raise (BigraphStructureException "Attempted to unbox empty bigraph")
 
 	fun parent b = #parent (unbox b)
 
@@ -106,23 +126,37 @@ struct
 
 	fun symtab b = #symtab (unbox b)
 
-	fun name k = (fn (AnonControl t) => ": " ^ t
-                       | (NodeControl (l,t)) => l ^ " : " ^ t
-                       | (ParamNodeControl (l,t,p)) => l ^ " : " ^ t ^ " (...)"
-					   | (SiteControl (l,t)) => l ^ " : " ^ t ^ " site" 
-					   | (WildControl t) => "_ : " ^ t)
+	fun ty_name' (TyName n) = n
+	  | ty_name' (TyTuple l) = String.concatWith " * " (map ty_name l)
+	  | ty_name' (TyPoly n) = "'" ^ n
+	  | ty_name' (TyCon (n1, n2)) = ty_name n1 ^ " " ^ ty_name n2
+	  | ty_name' (TyUnknown) = "???"
+	  | ty_name' (TyVar i) = "?X" ^ Int.toString i
+	and ty_name x = (Debug.debug 2 "ty_name\n"; ty_name' x)
+
+	fun data_ty_name (IntData i) = Int.toString i ^ " : int"
+	  | data_ty_name (StringData d) = "\"" ^ d ^ "\" : string"
+	  | data_ty_name (VarData (n,t)) = n ^ " : " ^ ty_name t
+	  | data_ty_name (UnitData) = "() : unit"
+
+	fun name k = (fn (AnonControl t) => ": " ^ ty_name t
+                       | (NodeControl (l,t)) => l ^ " : " ^ ty_name t
+                       | (ParamNodeControl (l,t,p)) => l ^ " : " ^ ty_name t ^ " (...)"
+					   | (SiteControl (l,t)) => l ^ " : " ^ ty_name t ^ " site" 
+					   | (WildControl t) => "_ : " ^ ty_name t
+					   | (DataControl k) => data_ty_name k)
 				(control k)
 
 	local
 		fun indent 0 s = s
-      	  | indent n s = "    " ^ indent (n-1) s
+      	  | indent n s = "  " ^ indent (n-1) s
 
 		fun to_string_h n Empty = "(empty)"
 		  | to_string_h n b = 
 		  let
 		  	val mindent = indent n
 		  in
-		  	mindent (name b) ^ " {\n" ^ mindent (String.concatWith "\n" (map (to_string_h (n+1)) (children b))) ^ "\n" ^ mindent "}\n"
+		  	"\n- " ^ mindent (name b) ^ " {" ^ mindent (String.concatWith "\n" (map (to_string_h (n+1)) (children b))) ^ "\n" ^ mindent "  }\n"
 		  end
 	in
 		val to_string = to_string_h 0
@@ -141,11 +175,11 @@ struct
 	  | get_name b n = (Symtab.get (symtab b) n handle NotFound => get_name (parent b) n)
 
 	fun insert_name Empty n v = raise BigraphNameException ("Cannot insert name '" ^ n ^ "' into empty bigraph!") 
-	  | insert_name b n v = (print ("INSERT: " ^ n ^ " into " ^ (name b) ^ "\n"); Symtab.insert (symtab b) n v)
+	  | insert_name b n v = (Debug.debug 2 ("INSERT: " ^ n ^ " into " ^ (name b) ^ "\n"); Symtab.insert (symtab b) n v)
 
 	fun add_child (parent as (Bigraph (p as ref k))) (child as (Bigraph (c as ref l))) =
 		let
-			val _ = print ("add_child: " ^ name parent ^ " parent of " ^ name child ^ "\n")
+			val _ = Debug.debug 2 ("add_child: " ^ name parent ^ " parent of " ^ name child ^ "\n")
 			val _ = p := {control = #control k, 
 				parent = #parent k, 
 				children = #children k @ [child],

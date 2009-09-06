@@ -7,8 +7,8 @@ struct
 	val tests = [
 	fn () => (* add_child *)
 	let
-		val a = new (AnonControl "foo")
-		val b = new (AnonControl "bar")
+		val a = new (AnonControl (TyName "foo"))
+		val b = new (AnonControl (TyName "bar"))
 		val _ = add_child a b
 		val b' = hd (children a)
 	in
@@ -18,9 +18,9 @@ struct
 
 	fn () => (* siblings *)
 	let
-		val a = new (AnonControl "foo")
-		val b = new (AnonControl "child1")
-		val c = new (AnonControl "child2")
+		val a = new (AnonControl (TyName "foo"))
+		val b = new (AnonControl (TyName "child1"))
+		val c = new (AnonControl (TyName "child2"))
 		val _ = add_child a b
 		val _ = add_child a c
 		val b' = hd (children a)
@@ -33,8 +33,8 @@ struct
 
 	fn () => (* add_link *)
 	let
-		val a = new (AnonControl "foo")
-		val b = new (AnonControl "bar")
+		val a = new (AnonControl (TyName "foo"))
+		val b = new (AnonControl (TyName "bar"))
 		val _ = add_link a NullFace b NullFace
 		val l1 = link_targets a
 		val l2 = link_targets b
@@ -49,10 +49,10 @@ struct
 
 	fn () => (* delete_child *)
 	let
-		val a = new (AnonControl "foo")
-		val b = new (AnonControl "child1")
-		val c = new (AnonControl "child2")
-		val d = new (AnonControl "child3")
+		val a = new (AnonControl (TyName "foo"))
+		val b = new (AnonControl (TyName "child1"))
+		val c = new (AnonControl (TyName "child2"))
+		val d = new (AnonControl (TyName "child3"))
 		val _ = add_child a b
 		val _ = add_child a c
 		val _ = add_child a d
@@ -67,9 +67,9 @@ struct
 
 	fn () => (* delete_link *)
 	let
-		val a = new (AnonControl "foo")
-		val b = new (AnonControl "bar")
-		val c = new (AnonControl "baz")
+		val a = new (AnonControl (TyName "foo"))
+		val b = new (AnonControl (TyName "bar"))
+		val c = new (AnonControl (TyName "baz"))
 		val _ = add_link a NullFace b NullFace
 		val _ = add_link a NullFace c NullFace
 		val l1 = link_targets a

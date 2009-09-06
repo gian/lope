@@ -4,7 +4,8 @@ struct
 		val _ =
 		(BigraphTests.run_all_tests ();
 		 SymtabTests.run_all_tests ();
-		 ParseTests.run_all_tests ())
+		 ParseTests.run_all_tests ();
+		 TypesTests.run_all_tests ())
 		val _ = print ("\nTotal: " ^ Int.toString (!Test.totalCount) ^ "\nFailures: " ^ Int.toString (!Test.failedCount) ^ "\n")
 		in
 			if (!Test.failedCount) > 0 then raise (Fail (Int.toString (!Test.failedCount) ^ " tests failed")) else ()

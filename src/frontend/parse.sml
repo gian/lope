@@ -24,8 +24,10 @@ struct
 	  val _ = (ErrorMsg.reset(); ErrorMsg.fileName := "__internal__")
 	  val file = TextIO.openString inp
 	  fun get _ = TextIO.input file
+	  val _ = Debug.debug 3 ("parse_string: " ^ inp ^ "\n")
 	  val lexer = LrParser.Stream.streamify (Lex.makeLexer get)
 	  val (bg,_) = LopeP.parse(30,lexer,parseerror,())
+	  val _ = Debug.debug 3 ("parsed_string: " ^ inp ^ "\n")
        in 
 	  		ParseTree.to_bigraph Bigraph.Empty bg
       end  

@@ -1,6 +1,8 @@
 Group is
+		lib/debug.sml
 		lib/symtab.sml
         lib/bigraph.sml
+		types/types.sml
 		frontend/parse_tree.sml
         frontend/errormsg.sml
         frontend/lope.grm
@@ -10,6 +12,7 @@ Group is
         tests/bigraph_tests.sml
 		tests/symtab_tests.sml
 	    tests/parse_tests.sml
+	    tests/types_tests.sml
         tests/lope_tests.sml
         $/smlnj-lib.cm
         $/ml-yacc-lib.cm
