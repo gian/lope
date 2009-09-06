@@ -23,6 +23,7 @@ structure P = ParseTree
 	| ILINK
 	| LT
 	| GT
+	| INT of int
 	| IDENT of string
 	| SITEIDENT of string
     | ERROR
@@ -33,7 +34,10 @@ structure P = ParseTree
 	   | bigraph_list of P.parse_tree list
 	   | control of B.lope_control
 	   | link of P.parse_tree
+	   | link_val_frag of P.link_val
 	   | link_val of P.link_val
+	   | link_mask_list of P.link_mask list
+	   | link_mask of P.link_mask
 	   | param_list of (B.label * B.ty) list
 	   | param of B.label * B.ty
 	   | typesig of B.ty
@@ -60,7 +64,19 @@ bigraph: LBR bigraph_list RBR				(P.Node (B.new (B.AnonControl ""), bigraph_list
 
 link: LINK link_val ILINK link_val			(P.Link ("", link_val1, link_val2))
 
-link_val: bigraph							(P.AllInterface bigraph)
+link_val_frag: bigraph						(P.LinkAnon bigraph)
+        | IDENT								(P.LinkName IDENT)
+		| COLON typesig						(P.LinkType typesig)
+
+link_val: link_val_frag LT link_mask_list GT (P.LinkMask (link_val_frag, link_mask_list))
+       | link_val_frag						(link_val_frag)
+
+link_mask_list: link_mask COMMA link_mask_list	(link_mask :: link_mask_list)
+              | link_mask					([link_mask])
+
+link_mask: INT								(P.MaskInt INT)
+         | IDENT							(P.MaskName IDENT)
+		 | COLON typesig					(P.MaskType typesig)
 
 control: IDENT COLON typesig LPAR param_list RPAR (B.ParamNodeControl (IDENT,typesig,param_list))
        | IDENT COLON typesig LPAR RPAR		(B.NodeControl (IDENT, typesig))	

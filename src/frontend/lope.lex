@@ -42,6 +42,7 @@ eol=[\n\r];
 <LOPE>"<->" => (Tokens.ILINK(yypos, yypos+3));
 <LOPE>"<" => (Tokens.LT(yypos, yypos+1));
 <LOPE>">" => (Tokens.GT(yypos, yypos+1));
+<LOPE>{digits} => (Tokens.INT (valOf (Int.fromString yytext), yypos,yypos + size yytext));
 <LOPE>{ident}	=> (Tokens.IDENT(yytext,yypos,yypos+size yytext));
 <LOPE>{siteident} => (Tokens.SITEIDENT(yytext,yypos,yypos+size yytext));
 <LOPE>"(*"		=> (YYBEGIN COMMENT; continue());

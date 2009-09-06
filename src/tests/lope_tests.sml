@@ -3,6 +3,7 @@ struct
 	fun run_all_tests () = let
 		val _ =
 		(BigraphTests.run_all_tests ();
+		 SymtabTests.run_all_tests ();
 		 ParseTests.run_all_tests ())
 		val _ = print ("\nTotal: " ^ Int.toString (!Test.totalCount) ^ "\nFailures: " ^ Int.toString (!Test.failedCount) ^ "\n")
 		in

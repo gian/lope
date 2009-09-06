@@ -27,7 +27,7 @@ struct
 	  val lexer = LrParser.Stream.streamify (Lex.makeLexer get)
 	  val (bg,_) = LopeP.parse(30,lexer,parseerror,())
        in 
-	  		ParseTree.to_bigraph bg
+	  		ParseTree.to_bigraph Bigraph.Empty bg
       end  
 
   fun parse filename = let
@@ -37,7 +37,7 @@ struct
 	  val lexer = LrParser.Stream.streamify (Lex.makeLexer get)
 	  val (bg,_) = LopeP.parse(30,lexer,parseerror,())
        in TextIO.closeIn file;
-	    	ParseTree.to_bigraph bg
+	    	ParseTree.to_bigraph Bigraph.Empty bg
       end  
 end
 

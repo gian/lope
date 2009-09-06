@@ -90,10 +90,22 @@ struct
 		val _ = print (B.to_string p)
 	in
 		assert ("site1", B.name r = "$x : t2 site") 
+	end,
+
+	fn () => (* link_tl *)
+	let
+		val a = hd (B.children (Parse.parse_string 
+			"A : t1 { }\nB : t2 { }\nlink A <-> B \n"))
+		val _ = print (B.to_string a)
+	in
+		assert ("link_tl1", B.name a = "A : t1") ;
+		assert ("link_tl2", length (B.link_targets a) = 1) ;
+		assert ("link_tl3", B.name (hd (B.link_targets a)) = "B : t2")
 	end
 	]
 
 	fun run_all_tests () = (print "[ParseTests]\n"; app run_test tests) 
 		handle (B.BigraphStructureException e) => print ("BigraphStructureException: " ^ e ^ "\n")
 		     | (B.BigraphLinkException e) => print ("BigraphLinkException: " ^ e ^ "\n")
+		     | (B.BigraphNameException e) => print ("BigraphNameException: " ^ e ^ "\n")
 end

@@ -1,4 +1,5 @@
 Group is
+		lib/symtab.sml
         lib/bigraph.sml
 		frontend/parse_tree.sml
         frontend/errormsg.sml
@@ -7,6 +8,7 @@ Group is
         frontend/parse.sml
         tests/test.sml
         tests/bigraph_tests.sml
+		tests/symtab_tests.sml
 	    tests/parse_tests.sml
         tests/lope_tests.sml
         $/smlnj-lib.cm
