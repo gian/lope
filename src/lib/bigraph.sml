@@ -12,7 +12,13 @@ sig
 	exception BigraphNameException of string
 
 	type 'a node
-  	
+  
+
+	datatype link_face = NamedFace of label
+	                   | TypedFace of ty
+					   | NumberedFace of int
+					   | NullFace
+
 	datatype 'a bigraph = Bigraph of 'a node ref
                             | Empty
 
@@ -32,7 +38,7 @@ sig
 	val control : lope_control bigraph -> lope_control
 	val children : lope_control bigraph -> lope_control bigraph list
 	val siblings : lope_control bigraph -> lope_control bigraph list
-	val links : lope_control bigraph -> (label * ty * lope_control bigraph) list
+	val links : lope_control bigraph -> (link_face * lope_control bigraph * link_face) list
 	val params : lope_control bigraph -> (label * ty) list
 	val symtab : lope_control bigraph -> lope_control bigraph Symtab.symtab
 
@@ -41,9 +47,9 @@ sig
 	val delete_child : lope_control bigraph -> lope_control bigraph -> unit
 
 	(* Links *)
-	val add_link : 'a bigraph -> label -> ty -> 'a bigraph -> unit 
+	val add_link : 'a bigraph -> link_face -> 'a bigraph -> link_face -> unit 
 	val link_targets : 'a bigraph -> 'a bigraph list
-	val delete_link : 'a bigraph -> 'a bigraph -> unit
+	val delete_link : 'a bigraph -> link_face -> 'a bigraph -> link_face -> unit
 
 	(* Names *)
 	val get_name : lope_control bigraph -> label -> lope_control bigraph
@@ -62,12 +68,17 @@ struct
 	exception BigraphLinkException of string
 	exception BigraphNameException of string
 
+	datatype link_face = NamedFace of label
+	                   | TypedFace of ty
+					   | NumberedFace of int
+					   | NullFace
+	
 	datatype 'a bigraph = Bigraph of 'a node ref
                             | Empty
 	withtype 'a node = {control : 'a, 
 					 	children : 'a bigraph list, 
 						parent : 'a bigraph, 
-						links : (label * ty  * 'a bigraph) list, 
+						links : (link_face  * 'a bigraph * link_face) list, 
 						symtab : 'a bigraph Symtab.symtab} 
 
 
@@ -120,7 +131,7 @@ struct
 	fun new (control : lope_control) = Bigraph (ref {control = control, 
 													 parent = empty, 
 													 children = [], 
-													 links = [] : (label * ty * lope_control bigraph) list, 
+													 links = [] : (link_face * lope_control bigraph * link_face) list, 
 													 symtab = Symtab.new Empty})
 
 	fun get_name Empty n = raise BigraphNameException ("Name '" ^ n ^ "' not found")
@@ -168,33 +179,33 @@ struct
 				symtab = #symtab k})
 	  | delete_child _ _ = raise BigraphStructureException ("Attempted to delete child from invalid bigraph")
 
-	fun add_link (s1 as (Bigraph (b1 as ref k1))) l ty (s2 as (Bigraph (b2 as ref k2))) = 
+	fun add_link (s1 as (Bigraph (b1 as ref k1))) face1 (s2 as (Bigraph (b2 as ref k2))) face2 = 
 		(b1 := {control = #control k1,
 			       parent = #parent k1,
 			       children = #children k1,
-			       links = (l,ty,s2) :: #links k1,
+			       links = (face1,s2,face2) :: #links k1,
 				   symtab = #symtab k1} ;
 		 b2 := {control = #control k2,
 			       parent = #parent k2,
 			       children = #children k2,
-			       links = (l,ty,s1) :: #links k2,
+			       links = (face2,s1,face1) :: #links k2,
 				   symtab = #symtab k2})
-	  | add_link _ l ty _ = raise BigraphLinkException ("Attempted to add a link " ^ l ^ " : " ^ ty ^ " to invalid bigraphs")
+	  | add_link _ _ _ _ = raise BigraphLinkException ("Attempted to add a link to invalid bigraphs")
 
-	fun delete_link (s1 as (Bigraph (b1 as ref k1))) (s2 as (Bigraph (b2 as ref k2))) =
+	fun delete_link (s1 as (Bigraph (b1 as ref k1))) face1 (s2 as (Bigraph (b2 as ref k2))) face2 =
 		(b1 := {control = #control k1,
 			       parent = #parent k1,
 			       children = #children k1,
-			       links = List.filter (fn (_,_,Bigraph l) => l <> b2) (#links k1),
+			       links = List.filter (fn (_,Bigraph l,_) => l <> b2) (#links k1),
 				   symtab = #symtab k1} ;
 		 b2 := {control = #control k2,
 			       parent = #parent k2,
 			       children = #children k2,
-			       links = List.filter (fn (_,_,Bigraph l) => l <> b1) (#links k2),
+			       links = List.filter (fn (_,Bigraph l,_) => l <> b1) (#links k2),
 				   symtab = #symtab k2})
-	  | delete_link _ _ = raise BigraphLinkException ("Attempted to delete link from invalid bigraph")
+	  | delete_link _ _ _ _ = raise BigraphLinkException ("Attempted to delete link from invalid bigraph")
 
-	fun link_targets b = map (fn (l,t,k) => k) (links b)
+	fun link_targets b = map (fn (_,k,_) => k) (links b)
 
 
 end

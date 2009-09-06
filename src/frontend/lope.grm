@@ -36,7 +36,7 @@ structure P = ParseTree
 	   | link of P.parse_tree
 	   | link_val_frag of P.link_val
 	   | link_val of P.link_val
-	   | link_mask_list of P.link_mask list
+	   | link_mask_list of P.link_mask 
 	   | link_mask of P.link_mask
 	   | param_list of (B.label * B.ty) list
 	   | param of B.label * B.ty
@@ -71,8 +71,8 @@ link_val_frag: bigraph						(P.LinkAnon bigraph)
 link_val: link_val_frag LT link_mask_list GT (P.LinkMask (link_val_frag, link_mask_list))
        | link_val_frag						(link_val_frag)
 
-link_mask_list: link_mask COMMA link_mask_list	(link_mask :: link_mask_list)
-              | link_mask					([link_mask])
+link_mask_list: link_mask COMMA link_mask_list	(P.MaskList (link_mask :: [link_mask_list]))
+              | link_mask					(link_mask)
 
 link_mask: INT								(P.MaskInt INT)
          | IDENT							(P.MaskName IDENT)

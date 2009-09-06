@@ -35,7 +35,7 @@ struct
 	let
 		val a = new (AnonControl "foo")
 		val b = new (AnonControl "bar")
-		val _ = add_link a "l" "int" b
+		val _ = add_link a NullFace b NullFace
 		val l1 = link_targets a
 		val l2 = link_targets b
 		val _ = assert("add_link1", length l1 = 1)
@@ -70,11 +70,11 @@ struct
 		val a = new (AnonControl "foo")
 		val b = new (AnonControl "bar")
 		val c = new (AnonControl "baz")
-		val _ = add_link a "l" "int" b
-		val _ = add_link a "m" "int" c
+		val _ = add_link a NullFace b NullFace
+		val _ = add_link a NullFace c NullFace
 		val l1 = link_targets a
 		val _ = assert("delete_link1", length l1 = 2)
-		val _ = delete_link a b
+		val _ = delete_link a NullFace b NullFace
 		val l2 = link_targets a
 		val _ = assert("delete_link2", length l2 = 1)
 		val l2' = hd l2
