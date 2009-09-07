@@ -1,0 +1,19 @@
+The Lope Programming Language
+
+Copyright (c) 2009 Gian Perrone
+
+Requirements:
+
+* SML/NJ - do not use 110.68 or 110.69, as ML-Lex invocation appears to be i
+  broken (.67 and .70 both appear to work, however). 
+
+Building:
+
+Just run 'make' in the src/ directory.  This will execute all of the tests.
+
+'make debug' will output additional debugging information at runtime.
+
+
+
+
+
