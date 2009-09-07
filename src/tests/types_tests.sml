@@ -37,6 +37,18 @@ struct
 	    assert ("is_subtype3", is_subtype t' t'') ; 
 	    assert ("is_subtype4", not (is_subtype t'' t)) ; 
 	    assert ("is_subtype5", not (is_subtype t'' t'))  
+	end,
+    
+	fn () => (* inferA *)
+	let
+		val a = B.new (B.AnonControl (B.TyName "A"))
+		val b = B.new (B.AnonControl (B.TyUnknown))
+		val c = B.new (B.AnonControl (B.TyName "C"))
+		val _ = B.add_child a b
+		val _ = B.add_child b c
+		val t = infer a
+	in
+	    assert ("inferA1", to_string t = "A{???{C}}")  
 	end
 	]
 	
