@@ -16,6 +16,27 @@ struct
 	    assert ("ty_name4", tn (B.TyPoly "a") = "'a") ; 
 	    assert ("ty_name5", tn (B.TyVar 1) = "?X1") ; 
 	    assert ("ty_name6", tn (B.TyUnknown) = "???")  
+	end,
+	fn () => (* to_string *)
+	let
+		val t = BgType(B.TyName "a", [BgType (B.TyName "b",[]), 
+										BgType (B.TyName "c", [])])
+	in
+	    assert ("to_string1", to_string t = "a{b,c}") 
+	end,
+	fn () => (* is_subtype *)
+	let
+		val t = BgType(B.TyName "a",[])
+		val t' =  BgType(B.TyName "a", [BgType (B.TyName "b",[])])
+		val t'' = BgType(B.TyName "a", [BgType (B.TyName "b",[]), 
+										BgType (B.TyName "c", [])])
+
+	in
+	    assert ("is_subtype1", is_subtype t t') ; 
+	    assert ("is_subtype2", is_subtype t t'') ; 
+	    assert ("is_subtype3", is_subtype t' t'') ; 
+	    assert ("is_subtype4", not (is_subtype t'' t)) ; 
+	    assert ("is_subtype5", not (is_subtype t'' t'))  
 	end
 	]
 	
