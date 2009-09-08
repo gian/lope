@@ -12,6 +12,7 @@ sig
 				| TyUnknown
 				| TyVar of int
 				| TyComp of ty * ty list
+				| TyArrow of ty * ty
 
 	exception BigraphStructureException of string
 	exception BigraphLinkException of string
@@ -82,6 +83,7 @@ struct
 				| TyUnknown
 				| TyVar of int
 				| TyComp of ty * ty list
+				| TyArrow of ty * ty
 
 	exception BigraphStructureException of string
 	exception BigraphLinkException of string
@@ -136,6 +138,7 @@ struct
 	  | ty_name' (TyVar i) = "?X" ^ Int.toString i
 	  | ty_name' (TyComp (t, [])) = ty_name' t
 	  | ty_name' (TyComp (t, l)) = ty_name' t ^ "{" ^ (String.concatWith "," (map ty_name' l)) ^ "}"
+	  | ty_name' (TyArrow (t1,t2)) = ty_name' t1 ^ " -> " ^ ty_name' t2
 	and ty_name x = (Debug.debug 2 "ty_name\n"; ty_name' x)
 
 	fun data_ty_name (IntData i) = Int.toString i ^ " : int"
@@ -144,11 +147,11 @@ struct
 	  | data_ty_name (UnitData) = "() : unit"
 
 	fun name k = (fn (AnonControl t) => ": " ^ ty_name t
-                       | (NodeControl (l,t)) => l ^ " : " ^ ty_name t
-                       | (ParamNodeControl (l,t,p)) => l ^ " : " ^ ty_name t ^ " (...)"
-					   | (SiteControl (l,t)) => l ^ " : " ^ ty_name t ^ " site" 
-					   | (WildControl t) => "_ : " ^ ty_name t
-					   | (DataControl k) => data_ty_name k)
+                   | (NodeControl (l,t)) => l ^ " : " ^ ty_name t
+                   | (ParamNodeControl (l,t,p)) => l ^ " : " ^ ty_name t ^ " (...)"
+				   | (SiteControl (l,t)) => l ^ " : " ^ ty_name t ^ " site" 
+				   | (WildControl t) => "_ : " ^ ty_name t
+				   | (DataControl k) => data_ty_name k)
 				(control k)
 
 	local

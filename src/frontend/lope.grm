@@ -60,6 +60,7 @@ fun mkArith n t = B.new (B.AnonControl (B.TyCon (B.TyCon (B.TyName t, B.TyName n
 	   | link_mask of P.link_mask
 	   | param_list of (B.label * B.ty) list
 	   | param of B.label * B.ty
+	   | typeann of B.ty
 	   | typesig of B.ty
 	   | type_tuple of B.ty list
 %pos int
@@ -74,23 +75,21 @@ prog: bigraph_list							(pr 0; P.Node (B.empty, bigraph_list))
 bigraph_list: bigraph bigraph_list			(pr 111; bigraph :: bigraph_list)
             | 								(pr 112; [])
 
-bigraph: LBR bigraph_list RBR				(pr 1; P.Node (B.new (B.AnonControl B.TyUnknown), bigraph_list))
+bigraph: LBR bigraph_list RBR typeann		(pr 1; P.Node (B.new (B.AnonControl typeann), bigraph_list))
 	   | control LBR bigraph_list RBR		(pr 2; P.Node (B.new (control), bigraph_list))
-       | REACTION IDENT LBR bigraph bigraph	RBR	(pr 3; P.Node(B.new (B.NodeControl(IDENT,B.TyName "reaction")),[bigraph1,bigraph2]))
-	   | REDEX LBR bigraph_list RBR			(pr 4; P.Node (B.new (B.AnonControl(B.TyName "redex")), bigraph_list))
-	   | REACTUM LBR bigraph_list RBR		(pr 5; P.Node (B.new (B.AnonControl(B.TyName "reactum")), bigraph_list))
-	   | SITEIDENT COLON typesig			(pr 6; P.Node (B.new (B.SiteControl(SITEIDENT,typesig)), []))
-	   | SITEIDENT 							(pr 7; P.Node (B.new (B.SiteControl(SITEIDENT,B.TyUnknown)), []))
+       | REACTION IDENT LBR bigraph bigraph	RBR	(pr 3; P.Node(B.new (B.NodeControl(IDENT,B.TyCon (B.TyArrow (B.TyUnknown, B.TyUnknown), B.TyName "reaction"))),[bigraph1,bigraph2]))
+	   | REDEX bigraph						(pr 4; P.Node (B.new (B.AnonControl(B.TyCon (B.TyUnknown, B.TyName "redex"))), [bigraph]))
+	   | REACTUM bigraph					(pr 5; P.Node (B.new (B.AnonControl(B.TyCon (B.TyUnknown, B.TyName "reactum"))), [bigraph]))
+	   | SITEIDENT typeann					(pr 6; P.Node (B.new (B.SiteControl(SITEIDENT,typeann)), []))
 	   | link								(pr 8; link)
 	   | TYPE typesig EQ typesig			(pr 9; P.TypeDef (typesig1, typesig2))
-	   | VAL IDENT COMMA typesig EQ expr	(pr 50; P.ValDef (IDENT, typesig, expr))
-	   | VAL IDENT EQ expr					(pr 51; P.ValDef (IDENT, B.TyUnknown, expr))
+	   | VAL IDENT typeann EQ expr			(pr 50; P.ValDef (IDENT, typeann, expr))
 
 link: LINK link_val ILINK link_val			(pr 10; P.Link ("", link_val1, link_val2))
 
 link_val_frag: bigraph						(pr 34; P.LinkAnon bigraph)
         | IDENT								(pr 33; P.LinkName IDENT)
-		| COLON typesig						(pr 32; P.LinkType typesig)
+		| typeann							(pr 32; P.LinkType typeann)
 
 link_val: link_val_frag LT link_mask_list GT (pr 31; P.LinkMask (link_val_frag, link_mask_list))
        | link_val_frag						(pr 30; link_val_frag)
@@ -100,18 +99,17 @@ link_mask_list: link_mask COMMA link_mask_list	(pr 28; P.MaskList (link_mask :: 
 
 link_mask: INT								(pr 25; P.MaskInt INT)
          | IDENT							(pr 26; P.MaskName IDENT)
-		 | COLON typesig					(pr 27; P.MaskType typesig)
+		 | typeann							(pr 27; P.MaskType typeann)
 
-control: IDENT COLON typesig LPAR param_list RPAR (pr 10; B.ParamNodeControl (IDENT,typesig,param_list))
-       | IDENT COLON typesig LPAR RPAR		(pr 11; B.NodeControl (IDENT, typesig))	
-	   | IDENT LPAR param_list RPAR 		(pr 12; B.ParamNodeControl (IDENT,B.TyUnknown,param_list))
-       | IDENT LPAR RPAR					(pr 13; B.NodeControl (IDENT, B.TyUnknown))
-       | IDENT COLON typesig				(pr 14; B.NodeControl (IDENT1, typesig))
-       | IDENT								(pr 15; B.NodeControl (IDENT, B.TyUnknown))
-	   | COLON typesig						(pr 16; B.AnonControl typesig)
-	   | WILDCARD							(pr 17; B.WildControl B.TyUnknown)
-	   | WILDCARD COLON typesig				(pr 18; B.WildControl typesig)
+control: IDENT typeann LPAR param_list RPAR (pr 10; B.ParamNodeControl (IDENT,typeann,param_list))
+       | IDENT typeann LPAR RPAR			(pr 11; B.NodeControl (IDENT, typeann))	
+       | IDENT typeann						(pr 14; B.NodeControl (IDENT, typeann))
+	   | typeann							(pr 16; B.AnonControl typeann)
+	   | WILDCARD COLON typeann				(pr 18; B.WildControl typeann)
 	   | 									(pr 19; B.AnonControl B.TyUnknown)
+
+typeann: COLON typesig						(typesig)
+       | 									(B.TyUnknown)
 
 typesig: IDENT								(pr 40; B.TyName IDENT)
 	   | POLYIDENT							(pr 41; B.TyPoly POLYIDENT)
