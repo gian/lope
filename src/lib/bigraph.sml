@@ -11,6 +11,7 @@ sig
 				| TyPoly of string
 				| TyUnknown
 				| TyVar of int
+				| TyComp of ty * ty list
 
 	exception BigraphStructureException of string
 	exception BigraphLinkException of string
@@ -80,6 +81,7 @@ struct
 				| TyPoly of string
 				| TyUnknown
 				| TyVar of int
+				| TyComp of ty * ty list
 
 	exception BigraphStructureException of string
 	exception BigraphLinkException of string
@@ -132,6 +134,8 @@ struct
 	  | ty_name' (TyCon (n1, n2)) = ty_name n1 ^ " " ^ ty_name n2
 	  | ty_name' (TyUnknown) = "???"
 	  | ty_name' (TyVar i) = "?X" ^ Int.toString i
+	  | ty_name' (TyComp (t, [])) = ty_name' t
+	  | ty_name' (TyComp (t, l)) = ty_name' t ^ "{" ^ (String.concatWith "," (map ty_name' l)) ^ "}"
 	and ty_name x = (Debug.debug 2 "ty_name\n"; ty_name' x)
 
 	fun data_ty_name (IntData i) = Int.toString i ^ " : int"

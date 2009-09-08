@@ -19,18 +19,15 @@ struct
 	end,
 	fn () => (* to_string *)
 	let
-		val t = BgType(B.TyName "a", [BgType (B.TyName "b",[]), 
-										BgType (B.TyName "c", [])])
+		val t =	B.TyComp (B.TyName "A", [B.TyName "B", B.TyName "C"])
 	in
-	    assert ("to_string1", to_string t = "a{b,c}") 
+	    assert ("to_string1", B.ty_name t = "A{B,C}") 
 	end,
 	fn () => (* is_subtype *)
 	let
-		val t = BgType(B.TyName "a",[])
-		val t' =  BgType(B.TyName "a", [BgType (B.TyName "b",[])])
-		val t'' = BgType(B.TyName "a", [BgType (B.TyName "b",[]), 
-										BgType (B.TyName "c", [])])
-
+		val t =	B.TyComp (B.TyName "A", [B.TyName "B"])	
+		val t' = B.TyComp (B.TyName "A", [B.TyComp (B.TyName "B", [B.TyName "C"])])
+		val t'' = B.TyComp (B.TyName "A", [B.TyComp (B.TyName "B", [B.TyName "C"]), B.TyName "D"])
 	in
 	    assert ("is_subtype1", is_subtype t t') ; 
 	    assert ("is_subtype2", is_subtype t t'') ; 
@@ -39,16 +36,16 @@ struct
 	    assert ("is_subtype5", not (is_subtype t'' t'))  
 	end,
     
-	fn () => (* inferA *)
+	fn () => (* ty_var_replace *)
 	let
 		val a = B.new (B.AnonControl (B.TyName "A"))
 		val b = B.new (B.AnonControl (B.TyUnknown))
 		val c = B.new (B.AnonControl (B.TyName "C"))
 		val _ = B.add_child a b
 		val _ = B.add_child b c
-		val t = infer a
+		val t = ty_var_replace a
 	in
-	    assert ("inferA1", to_string t = "A{???{C}}")  
+	    assert ("ty_var_replace", B.name t = ": A{?X1{C}}")
 	end
 	]
 	
