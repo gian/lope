@@ -81,8 +81,8 @@ struct
 	in
 		assert ("reaction1", B.name r = "R : ??? -> ???") ;
 		assert ("reaction2", length (B.children r) = 2) ;
-		assert ("reaction3(" ^ B.name (hd (B.children r)) ^ ")", B.name (hd (B.children r)) = ": ??? redex") ;
-		assert ("reaction4", B.name (hd (tl (B.children r))) = ": ??? reactum") ;
+		assert ("reaction3(" ^ B.name (hd (B.children r)) ^ ")", B.name (hd (B.children r)) = ": ???") ;
+		assert ("reaction4", B.name (hd (tl (B.children r))) = ": ???") ;
 		assert ("reaction5", length (B.children (hd (B.children r))) = 1) ;
 		assert ("reaction6", length  (B.children (hd (tl (B.children r)))) = 2) 
 	end,

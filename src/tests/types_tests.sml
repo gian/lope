@@ -85,8 +85,7 @@ struct
 			val _ = Debug.debug 2 (B.to_string p)
 	in
 		assert("constrain_typed1", List.exists (fn (B.TyName "T1", [B.TyVar 1, 
-					B.TyArrow (B.TyCon (B.TyVar 4, B.TyName "redex"), 
-								 B.TyCon (B.TyVar 5, B.TyName "reactum"))]) => true | _ => false) c)
+					B.TyArrow _]) => true | _ => false) c)
 	end
 	]
 	

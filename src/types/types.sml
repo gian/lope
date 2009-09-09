@@ -65,10 +65,10 @@ struct
 	  | substinty h n (B.TyArrow(a,b)) = B.TyArrow (substinty h n a, substinty h n b)
 	  | substinty h n (B.TyCon(a,b)) = B.TyCon (substinty h n a, substinty h n b)
 	  | substinty h n (B.TyTuple k) = B.TyTuple (map (substinty h n) k)
-	  | substinty (B.TyComp(a,_)) n (B.TyComp(b,x)) = if a = b then hd n else B.TyComp(b,x)
+	  | substinty (B.TyComp(a,_)) n (B.TyComp(b,x)) = if a = b then n else B.TyComp(b,x)
 	  | substinty h n (B.TyComp (t,l)) = B.TyComp (substinty h n t, map (substinty h n) l)
-	  | substinty (B.TyVar k1) n (B.TyVar k2) = if k1 = k2 then B.TyComp(B.TyVar k1, n) else (B.TyVar k2)
-	  | substinty (B.TyName k1) n (B.TyName k2) = if k1 = k2 then B.TyComp(B.TyName k1, n) else (B.TyName k2)
+	  | substinty (B.TyVar k1) n (B.TyVar k2) = if k1 = k2 then n else (B.TyVar k2)
+	  | substinty (B.TyName k1) n (B.TyName k2) = if k1 = k2 then n else (B.TyName k2)
 	  | substinty h n b = b 
 
 	fun map_cntrl tr (B.NodeControl (l,t)) = B.NodeControl (l, tr t)
@@ -89,7 +89,7 @@ struct
 
 	val uniq = ref 10000
 
-	fun uniq_ty b = if B.name_opt b = NONE then (B.TyName "empty") else B.TyUniq (B.name_opt b, (uniq := !uniq + 1; !uniq))
+	fun uniq_ty b = B.TyUniq (B.name_opt b, (uniq := !uniq + 1; !uniq))
 
 	fun opt b [] = [uniq_ty b]
 	  | opt b k = k
@@ -128,16 +128,22 @@ struct
 								   parent=parent,
 								   links=links,
 								   symtab=symtab})) b; b)
- 
-	fun ty_substitute b t1 t2 = (B.traverse 
+
+	fun wrap r [] = B.TyName "empty"
+	  | wrap r [k] = k
+	  | wrap r l = B.TyComp(r, l)
+
+
+	fun ty_substitute b t1 t2 =
+						(B.traverse 
 						(fn (p as ref (z as {control, children, parent, links, symtab})) => 
-							(p := {control = map_cntrl (substinty t1 t2) control,
+							(p := {control = map_cntrl (fn x => substinty t1 (wrap (B.ty (B.Bigraph p)) t2) x) control,
 								   children=children,
 								   parent=parent,
 								   links=links,
 								   symtab=symtab})) b; b)
 
 	fun simplify_constraints b [] = []
-	  | simplify_constraints b ((t1,t2)::t) = (t1,t2) :: (ty_substitute b t1 t2; simplify_constraints b (map (fn (x,y) => (x, (map (fn z => substinty t1 t2 z) y))) t))
+	  | simplify_constraints b ((t1,t2)::t) = (t1,t2) :: (ty_substitute b t1 t2; simplify_constraints b (map (fn (x,y) => (x, (map (fn z => substinty t1 (wrap t1 t2) z) y))) t))
 	
 end
