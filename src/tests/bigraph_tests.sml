@@ -81,7 +81,26 @@ struct
 	in
 		assert ("delete_link3", name l2' = name c) ;
 		assert ("delete_link4", length (link_targets b) = 0) 
+	end,
+
+	fn () => (* fold *)
+	let
+		val a = new (AnonControl (TyName "A"))
+		val b = new (AnonControl (TyName "B"))
+		val c = new (AnonControl (TyName "C"))
+		val d = new (AnonControl (TyName "D"))
+		val _ = add_child a b
+		val _ = add_child a c
+		val _ = add_child c d
+
+		fun collect_names (l,b) = l @ [name b]
+		val p = fold collect_names [] a
+		val _ = print ("fold: " ^ (String.concatWith "," p) ^ "\n")
+	in
+		assert ("fold1", p = [": A",": B",": C",": D"])
 	end
+
+
 	]
 
 	fun run_all_tests () = (print "[BigraphTests]\n"; app run_test tests)

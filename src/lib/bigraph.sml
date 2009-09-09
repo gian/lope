@@ -71,6 +71,9 @@ sig
 	(* Pretty printer *)
 	val to_string : lope_control bigraph -> string
 
+	(* Traversal *)
+	val traverse : (lope_control node ref -> unit) -> lope_control bigraph -> unit
+	val fold : ('a * lope_control bigraph -> 'a) -> 'a -> lope_control bigraph -> 'a
 end
 
 structure Bigraph : BIGRAPH =
@@ -249,6 +252,19 @@ struct
 	  | delete_link _ _ _ _ = raise BigraphLinkException ("Attempted to delete link from invalid bigraph")
 
 	fun link_targets b = map (fn (_,k,_) => k) (links b)
+
+	fun traverse f Empty = ()
+	  | traverse f (Bigraph b) = (f b; List.app (traverse f) (children (Bigraph b)))
+
+	fun fold f r Empty = r
+	  | fold f r (b as (Bigraph (ref {children=[],...}))) = f(r,b)
+	  | fold f r b =
+	  	let
+			val k = f (r,b)
+		in
+			List.foldl (fn (x,v) => fold f v x) k (children b)
+		end
+
 
 
 end

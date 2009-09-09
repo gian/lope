@@ -43,11 +43,14 @@ struct
 		val c = B.new (B.AnonControl (B.TyName "C"))
 		val _ = B.add_child a b
 		val _ = B.add_child b c
+		val _ = reset_ty_var ()
 		val t = ty_var_replace a
+		val _ = Debug.debug 2 ("ty_var_replace: " ^ B.name t)
 	in
-	    assert ("ty_var_replace", B.name t = ": A{?X1{C}}")
+	    assert ("ty_var_replace1", B.name t = ": A") ;
+	    assert ("ty_var_replace2", B.name (hd (B.children t)) = ": ?X0") 
 	end
 	]
 	
-	fun run_all_tests () = (print "[TypesTests]\n"; app run_test tests) handle b => raise TestFailed "types" 
+	fun run_all_tests () = (print "[TypesTests]\n"; app run_test tests) handle b => (raise b)
 end
