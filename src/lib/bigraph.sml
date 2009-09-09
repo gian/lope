@@ -13,6 +13,7 @@ sig
 				| TyVar of int
 				| TyComp of ty * ty list
 				| TyArrow of ty * ty
+				| TyUnit
 
 	exception BigraphStructureException of string
 	exception BigraphLinkException of string
@@ -45,6 +46,7 @@ sig
 
 	val ty_name : ty -> string
 	val name : lope_control bigraph -> string
+	val ty : lope_control bigraph -> ty
 
 	(* Accessors *)
 	val parent : lope_control bigraph -> lope_control bigraph
@@ -87,6 +89,7 @@ struct
 				| TyVar of int
 				| TyComp of ty * ty list
 				| TyArrow of ty * ty
+				| TyUnit
 
 	exception BigraphStructureException of string
 	exception BigraphLinkException of string
@@ -142,12 +145,19 @@ struct
 	  | ty_name' (TyComp (t, [])) = ty_name' t
 	  | ty_name' (TyComp (t, l)) = ty_name' t ^ "{" ^ (String.concatWith "," (map ty_name' l)) ^ "}"
 	  | ty_name' (TyArrow (t1,t2)) = ty_name' t1 ^ " -> " ^ ty_name' t2
-	and ty_name x = (Debug.debug 2 "ty_name\n"; ty_name' x)
+	  | ty_name'  TyUnit = "unit"
+	and ty_name x = (Debug.debug 5 "ty_name\n"; ty_name' x)
 
 	fun data_ty_name (IntData i) = Int.toString i ^ " : int"
 	  | data_ty_name (StringData d) = "\"" ^ d ^ "\" : string"
 	  | data_ty_name (VarData (n,t)) = n ^ " : " ^ ty_name t
 	  | data_ty_name (UnitData) = "() : unit"
+
+	fun data_ty (IntData i) = TyName "int"
+	  | data_ty (StringData d) = TyName "string"
+	  | data_ty (VarData (n,t)) = t
+	  | data_ty (UnitData) = TyUnit
+
 
 	fun name k = (fn (AnonControl t) => ": " ^ ty_name t
                    | (NodeControl (l,t)) => l ^ " : " ^ ty_name t
@@ -155,6 +165,14 @@ struct
 				   | (SiteControl (l,t)) => l ^ " : " ^ ty_name t ^ " site" 
 				   | (WildControl t) => "_ : " ^ ty_name t
 				   | (DataControl k) => data_ty_name k)
+				(control k)
+
+	fun ty k =   (fn (AnonControl t) => t
+                   | (NodeControl (l,t)) => t
+                   | (ParamNodeControl (l,t,p)) => t
+				   | (SiteControl (l,t)) => t 
+				   | (WildControl t) => t
+				   | (DataControl k) => data_ty k)
 				(control k)
 
 	local

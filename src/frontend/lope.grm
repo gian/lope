@@ -9,6 +9,9 @@ fun pr x = Debug.debug 5 (Int.toString x ^ "\n")
 
 fun mkArith n t = B.new (B.AnonControl (B.TyCon (B.TyCon (B.TyName t, B.TyName n), B.TyName "arith")))
 
+fun unpack (P.Node (_,ch)) = ch
+  | unpack _ = []
+
 %%
 
 %name Lope
@@ -77,10 +80,11 @@ bigraph_list: bigraph bigraph_list			(pr 111; bigraph :: bigraph_list)
 
 bigraph: LBR bigraph_list RBR typeann		(pr 1; P.Node (B.new (B.AnonControl typeann), bigraph_list))
 	   | control LBR bigraph_list RBR		(pr 2; P.Node (B.new (control), bigraph_list))
-       | REACTION IDENT LBR bigraph bigraph	RBR	(pr 3; P.Node(B.new (B.NodeControl(IDENT,B.TyCon (B.TyArrow (B.TyUnknown, B.TyUnknown), B.TyName "reaction"))),[bigraph1,bigraph2]))
-	   | REDEX bigraph						(pr 4; P.Node (B.new (B.AnonControl(B.TyCon (B.TyUnknown, B.TyName "redex"))), [bigraph]))
-	   | REACTUM bigraph					(pr 5; P.Node (B.new (B.AnonControl(B.TyCon (B.TyUnknown, B.TyName "reactum"))), [bigraph]))
+       | REACTION IDENT LBR bigraph bigraph	RBR	(pr 3; P.Node(B.new (B.NodeControl(IDENT,B.TyArrow (B.TyUnknown, B.TyUnknown))),[bigraph1,bigraph2]))
+	   | REDEX bigraph						(pr 4; P.Node (B.new (B.AnonControl(B.TyCon (B.TyUnknown, B.TyName "redex"))), unpack bigraph))
+	   | REACTUM bigraph					(pr 5; P.Node (B.new (B.AnonControl(B.TyCon (B.TyUnknown, B.TyName "reactum"))), unpack bigraph))
 	   | SITEIDENT typeann					(pr 6; P.Node (B.new (B.SiteControl(SITEIDENT,typeann)), []))
+	   | IDENT SEMI							(P.Node (B.new (B.DataControl (B.VarData (IDENT,B.TyUnknown))),[]))
 	   | link								(pr 8; link)
 	   | TYPE typesig EQ typesig			(pr 9; P.TypeDef (typesig1, typesig2))
 	   | VAL IDENT typeann EQ expr			(pr 50; P.ValDef (IDENT, typeann, expr))

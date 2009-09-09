@@ -12,6 +12,8 @@ sig
 	val reset_ty_var : unit -> unit
 
 	val ty_var_replace : Bigraph.lope_control Bigraph.bigraph -> Bigraph.lope_control Bigraph.bigraph
+	val constrain : Bigraph.lope_control Bigraph.bigraph -> Bigraph.ty
+	val get_constraints : unit -> (Bigraph.ty * Bigraph.ty list) list
 	val infer : Bigraph.lope_control Bigraph.bigraph -> ty 
 end
 
@@ -63,6 +65,31 @@ struct
 	  | ty_var_replace_cntrl (B.WildControl t) = B.WildControl (ty_replace t)
 	  | ty_var_replace_cntrl (B.DataControl d) = B.DataControl (case d of B.VarData (l,t) => B.VarData (l,ty_replace t) | p => p)
 
+	val constr : (B.ty * B.ty list) list ref = ref []
+
+	fun add_constraint t1 t2 = constr := !constr @ [(t1,t2)]
+
+	fun get_constraints () = (List.app (fn (x,l) => Debug.debug 2 (" * " ^ B.ty_name x ^ " = " ^ (String.concatWith "," (map B.ty_name l)))) (!constr);
+								!constr)
+
+	fun constrain b = 
+		(case B.ty b of B.TyVar x => (add_constraint (B.TyVar x) (map constrain (B.children b)); B.TyVar x)
+		              | B.TyName x => (add_constraint (B.TyName x) (map constrain (B.children b)); B.TyName x)
+					  | B.TyComp (t,ch) => (add_constraint (B.TyComp(t,ch)) (map constrain (B.children b)); t)
+					  | B.TyCon (t,t') => (add_constraint (B.TyCon(t,t')) (map constrain (B.children b)); B.TyCon(t,t'))
+					  | B.TyUnit => B.TyUnit
+					  | B.TyArrow (t1,t2) =>
+					  	let
+					  		val redex = hd (B.children b)
+							val reactum = hd (tl (B.children b))
+					    	val redexty = constrain redex
+							val reactumty = constrain reactum
+							val _ = add_constraint (B.TyArrow (t1,t2)) ([B.TyArrow (redexty,reactumty)])
+					  	in
+					  		B.TyArrow(redexty,reactumty)
+					  	end
+					  | B.TyUnknown => raise Fail "Constraint failure - ??? appears where only type variables should be present.")
+
 	fun infer b = B.TyUnknown
 
 	fun ty_var_replace b = (B.traverse 
@@ -73,5 +100,11 @@ struct
 								   links=links,
 								   symtab=symtab})) b; b)
  
-
+	fun ty_replace b t1 t2 = (B.traverse 
+						(fn (p as ref (z as {control, children, parent, links, symtab})) => 
+							(p := {control = ty_var_replace_cntrl control,
+								   children=children,
+								   parent=parent,
+								   links=links,
+								   symtab=symtab})) b; b)
 end

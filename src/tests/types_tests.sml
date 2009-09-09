@@ -49,6 +49,20 @@ struct
 	in
 	    assert ("ty_var_replace1", B.name t = ": A") ;
 	    assert ("ty_var_replace2", B.name (hd (B.children t)) = ": ?X0") 
+	end,
+
+	fn () => (* constrain *)
+	let
+			val p = ty_var_replace (Parse.parse_string 
+			("A { B { }\nreaction R { redex { B {} } reactum { B {} C {} } } }\n" ^ 
+			"D { E { }\nreaction R' { redex { F {} } reactum { G {} H {} } } }\n" ))
+
+			val p' = constrain p
+			val _ = Debug.debug 2 ("Constraint: " ^ B.ty_name p')
+			val _ = Debug.debug 2 (B.to_string p)
+			val _ = get_constraints ()
+	in
+		assert("constrain1", false)
 	end
 	]
 	

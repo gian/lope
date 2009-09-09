@@ -22,7 +22,7 @@ struct
 	  | to_bigraph par (Node (B.Empty, l)) =
 	  	let
 			val _ = Debug.debug 3 "Creating World\n"
-			val world = B.new (B.NodeControl ("World", B.TyName "world"))
+			val world = B.new (B.NodeControl ("World", B.TyUnknown))
 			val _ = (List.app (fn x => (B.add_child world (to_bigraph world x))) l)
 		in
 			world

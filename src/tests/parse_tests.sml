@@ -11,7 +11,7 @@ struct
 		val p = Parse.parse_string "{}\n"
 		val p' = hd (B.children p)
 	in
-	    assert ("world1", B.name p = "World : world") ;
+	    assert ("world1", B.name p = "World : ???") ;
 		assert ("empty_anon1(" ^ B.name p' ^ ")",B.name p' = ": ???") ;
 		assert ("empty_anon2",B.children p' = [])
 	end,
@@ -75,14 +75,16 @@ struct
 		val p = hd (B.children (Parse.parse_string 
 			"A { B { }\nreaction R { redex { B {} } reactum { B {} C {} } } }\n"))
 		val r = hd (tl (B.children p))
+		val _ = Debug.debug 2 ("B.name r: " ^ B.name r)
 		val _ = Debug.debug 2 (B.to_string p)
+		val _ = Debug.debug 2 ("B.children len: " ^ B.to_string (hd (B.children (hd (tl (B.children r))))))
 	in
-		assert ("reaction1", B.name r = "R : ??? -> ??? reaction") ;
+		assert ("reaction1", B.name r = "R : ??? -> ???") ;
 		assert ("reaction2", length (B.children r) = 2) ;
 		assert ("reaction3(" ^ B.name (hd (B.children r)) ^ ")", B.name (hd (B.children r)) = ": ??? redex") ;
 		assert ("reaction4", B.name (hd (tl (B.children r))) = ": ??? reactum") ;
 		assert ("reaction5", length (B.children (hd (B.children r))) = 1) ;
-		assert ("reaction6", length (B.children (hd (B.children (hd (tl (B.children r)))))) = 2) 
+		assert ("reaction6", length  (B.children (hd (tl (B.children r)))) = 2) 
 	end,
 
     fn () => (* site *)
