@@ -51,18 +51,42 @@ struct
 	    assert ("ty_var_replace2", B.name (hd (B.children t)) = ": ?X0") 
 	end,
 
-	fn () => (* constrain *)
+	fn () => (* constrain_anon *)
 	let
+			val _ = reset_ty_var ()
 			val p = ty_var_replace (Parse.parse_string 
-			("A { B { }\nreaction R { redex { B {} } reactum { B {} C {} } } }\n" ^ 
-			"D { E { }\nreaction R' { redex { F {} } reactum { G {} H {} } } }\n" ))
+			("A { B { }\nreaction R { redex { B {} } reactum { C {} D {} } } }\n" ^ 
+			"E { F { }\nreaction R' { redex { G {} } reactum { H {} I {} } } }\n" ))
 
+			val _ = reset_constraints ()
 			val p' = constrain p
 			val _ = Debug.debug 2 ("Constraint: " ^ B.ty_name p')
 			val _ = Debug.debug 2 (B.to_string p)
-			val _ = get_constraints ()
+			val k = get_constraints ()
+			val (k',_) = hd k
 	in
-		assert("constrain1", false)
+		assert("constrain_anon1", k' = B.TyVar 2)
+	end,
+	
+	fn () => (* constrain_typed *)
+	let
+			val _ = reset_ty_var ()
+			val p = ty_var_replace (Parse.parse_string 
+			("A : T1 { B { }\nreaction R { redex { C : T2 {} } reactum { {} E {} } } }\n" ^ 
+			"F { G { }\nreaction R' { redex { H {} } reactum { I {} {} } } }\n" ))
+
+			val _ = reset_constraints()
+			val p' = constrain p
+			val _ = Debug.debug 2 ("Constraint: " ^ B.ty_name p')
+			val _ = Debug.debug 2 (B.to_string p)
+			val c = get_constraints ()
+
+			val k = simplify_constraints p c
+			val _ = Debug.debug 2 (B.to_string p)
+	in
+		assert("constrain_typed1", List.exists (fn (B.TyName "T1", [B.TyVar 1, 
+					B.TyArrow (B.TyCon (B.TyVar 4, B.TyName "redex"), 
+								 B.TyCon (B.TyVar 5, B.TyName "reactum"))]) => true | _ => false) c)
 	end
 	]
 	

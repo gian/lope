@@ -12,8 +12,11 @@ sig
 	val reset_ty_var : unit -> unit
 
 	val ty_var_replace : Bigraph.lope_control Bigraph.bigraph -> Bigraph.lope_control Bigraph.bigraph
+	val ty_substitute : Bigraph.lope_control Bigraph.bigraph -> Bigraph.ty -> Bigraph.ty list -> Bigraph.lope_control Bigraph.bigraph
+	val simplify_constraints : Bigraph.lope_control Bigraph.bigraph -> (Bigraph.ty * Bigraph.ty list) list -> (Bigraph.ty * Bigraph.ty list) list 
 	val constrain : Bigraph.lope_control Bigraph.bigraph -> Bigraph.ty
 	val get_constraints : unit -> (Bigraph.ty * Bigraph.ty list) list
+	val reset_constraints : unit -> unit
 	val infer : Bigraph.lope_control Bigraph.bigraph -> ty 
 end
 
@@ -58,12 +61,22 @@ struct
 	  | ty_replace (B.TyComp (t,l)) = B.TyComp (ty_replace t, map ty_replace l)
 	  | ty_replace b = b 
 
-	fun ty_var_replace_cntrl (B.NodeControl (l,t)) = B.NodeControl (l, ty_replace t)
-	  | ty_var_replace_cntrl (B.AnonControl t) = B.AnonControl (ty_replace t)
-	  | ty_var_replace_cntrl (B.ParamNodeControl (l,t,lst)) = B.ParamNodeControl (l, ty_replace t, map (fn (l,t') => (l, ty_replace t')) lst)
-	  | ty_var_replace_cntrl (B.SiteControl (l,t)) = B.SiteControl (l, ty_replace t)
-	  | ty_var_replace_cntrl (B.WildControl t) = B.WildControl (ty_replace t)
-	  | ty_var_replace_cntrl (B.DataControl d) = B.DataControl (case d of B.VarData (l,t) => B.VarData (l,ty_replace t) | p => p)
+	fun substinty h n B.TyUnknown = fresh_ty_var ()
+	  | substinty h n (B.TyArrow(a,b)) = B.TyArrow (substinty h n a, substinty h n b)
+	  | substinty h n (B.TyCon(a,b)) = B.TyCon (substinty h n a, substinty h n b)
+	  | substinty h n (B.TyTuple k) = B.TyTuple (map (substinty h n) k)
+	  | substinty (B.TyComp(a,_)) n (B.TyComp(b,x)) = if a = b then hd n else B.TyComp(b,x)
+	  | substinty h n (B.TyComp (t,l)) = B.TyComp (substinty h n t, map (substinty h n) l)
+	  | substinty (B.TyVar k1) n (B.TyVar k2) = if k1 = k2 then B.TyComp(B.TyVar k1, n) else (B.TyVar k2)
+	  | substinty (B.TyName k1) n (B.TyName k2) = if k1 = k2 then B.TyComp(B.TyName k1, n) else (B.TyName k2)
+	  | substinty h n b = b 
+
+	fun map_cntrl tr (B.NodeControl (l,t)) = B.NodeControl (l, tr t)
+	  | map_cntrl tr (B.AnonControl t) = B.AnonControl (tr t)
+	  | map_cntrl tr (B.ParamNodeControl (l,t,lst)) = B.ParamNodeControl (l, tr t, map (fn (l,t') => (l, tr t')) lst)
+	  | map_cntrl tr (B.SiteControl (l,t)) = B.SiteControl (l, tr t)
+	  | map_cntrl tr (B.WildControl t) = B.WildControl (tr t)
+	  | map_cntrl tr (B.DataControl d) = B.DataControl (case d of B.VarData (l,t) => B.VarData (l,tr t) | p => p)
 
 	val constr : (B.ty * B.ty list) list ref = ref []
 
@@ -72,11 +85,25 @@ struct
 	fun get_constraints () = (List.app (fn (x,l) => Debug.debug 2 (" * " ^ B.ty_name x ^ " = " ^ (String.concatWith "," (map B.ty_name l)))) (!constr);
 								!constr)
 
+	fun reset_constraints () = constr := []
+
+	val uniq = ref 10000
+
+	fun uniq_ty b = if B.name_opt b = NONE then (B.TyName "empty") else B.TyUniq (B.name_opt b, (uniq := !uniq + 1; !uniq))
+
+	fun opt b [] = [uniq_ty b]
+	  | opt b k = k
+
 	fun constrain b = 
-		(case B.ty b of B.TyVar x => (add_constraint (B.TyVar x) (map constrain (B.children b)); B.TyVar x)
-		              | B.TyName x => (add_constraint (B.TyName x) (map constrain (B.children b)); B.TyName x)
-					  | B.TyComp (t,ch) => (add_constraint (B.TyComp(t,ch)) (map constrain (B.children b)); t)
-					  | B.TyCon (t,t') => (add_constraint (B.TyCon(t,t')) (map constrain (B.children b)); B.TyCon(t,t'))
+		(case B.ty b of B.TyVar x => (add_constraint (B.TyVar x) (opt b (map constrain (B.children b))); B.TyVar x)
+		              | B.TyName x => (add_constraint (B.TyName x) (opt b (map constrain (B.children b))); B.TyName x)
+					  | B.TyComp (t,ch) => 
+					  	let
+							val k = if (B.children b) = [] then uniq_ty b else B.TyComp(t,map constrain (B.children b))
+						in
+							(add_constraint (B.TyComp(t,ch)) [k]; k)
+						end
+					  | B.TyCon (t,t') => (add_constraint (B.TyCon(t,t')) (opt b (map constrain (B.children b))); B.TyCon(t,t'))
 					  | B.TyUnit => B.TyUnit
 					  | B.TyArrow (t1,t2) =>
 					  	let
@@ -84,27 +111,33 @@ struct
 							val reactum = hd (tl (B.children b))
 					    	val redexty = constrain redex
 							val reactumty = constrain reactum
-							val _ = add_constraint (B.TyArrow (t1,t2)) ([B.TyArrow (redexty,reactumty)])
+							val _ = add_constraint t1 [redexty]
+							val _ = add_constraint t2 [reactumty]
 					  	in
 					  		B.TyArrow(redexty,reactumty)
 					  	end
+					  | B.TyUniq s => B.TyUniq s
 					  | B.TyUnknown => raise Fail "Constraint failure - ??? appears where only type variables should be present.")
 
 	fun infer b = B.TyUnknown
 
 	fun ty_var_replace b = (B.traverse 
 						(fn (p as ref (z as {control, children, parent, links, symtab})) => 
-							(p := {control = ty_var_replace_cntrl control,
+							(p := {control = map_cntrl ty_replace control,
 								   children=children,
 								   parent=parent,
 								   links=links,
 								   symtab=symtab})) b; b)
  
-	fun ty_replace b t1 t2 = (B.traverse 
+	fun ty_substitute b t1 t2 = (B.traverse 
 						(fn (p as ref (z as {control, children, parent, links, symtab})) => 
-							(p := {control = ty_var_replace_cntrl control,
+							(p := {control = map_cntrl (substinty t1 t2) control,
 								   children=children,
 								   parent=parent,
 								   links=links,
 								   symtab=symtab})) b; b)
+
+	fun simplify_constraints b [] = []
+	  | simplify_constraints b ((t1,t2)::t) = (t1,t2) :: (ty_substitute b t1 t2; simplify_constraints b (map (fn (x,y) => (x, (map (fn z => substinty t1 t2 z) y))) t))
+	
 end

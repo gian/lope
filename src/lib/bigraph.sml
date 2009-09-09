@@ -13,6 +13,7 @@ sig
 				| TyVar of int
 				| TyComp of ty * ty list
 				| TyArrow of ty * ty
+				| TyUniq of string option * int
 				| TyUnit
 
 	exception BigraphStructureException of string
@@ -46,6 +47,7 @@ sig
 
 	val ty_name : ty -> string
 	val name : lope_control bigraph -> string
+	val name_opt : lope_control bigraph -> string option
 	val ty : lope_control bigraph -> ty
 
 	(* Accessors *)
@@ -90,6 +92,7 @@ struct
 				| TyComp of ty * ty list
 				| TyArrow of ty * ty
 				| TyUnit
+				| TyUniq of string option * int
 
 	exception BigraphStructureException of string
 	exception BigraphLinkException of string
@@ -145,6 +148,8 @@ struct
 	  | ty_name' (TyComp (t, [])) = ty_name' t
 	  | ty_name' (TyComp (t, l)) = ty_name' t ^ "{" ^ (String.concatWith "," (map ty_name' l)) ^ "}"
 	  | ty_name' (TyArrow (t1,t2)) = ty_name' t1 ^ " -> " ^ ty_name' t2
+	  | ty_name' (TyUniq (NONE,r)) = "<_@" ^ Int.toString r ^ ">" 
+	  | ty_name' (TyUniq (SOME n,r)) = "<" ^ n ^ "@" ^ Int.toString r ^ ">" 
 	  | ty_name'  TyUnit = "unit"
 	and ty_name x = (Debug.debug 5 "ty_name\n"; ty_name' x)
 
@@ -165,6 +170,15 @@ struct
 				   | (SiteControl (l,t)) => l ^ " : " ^ ty_name t ^ " site" 
 				   | (WildControl t) => "_ : " ^ ty_name t
 				   | (DataControl k) => data_ty_name k)
+				(control k)
+
+	fun name_opt k = (fn (AnonControl t) => NONE
+                   | (NodeControl (l,t)) => SOME l
+                   | (ParamNodeControl (l,t,p)) => SOME l
+				   | (SiteControl (l,t)) => SOME l 
+				   | (WildControl t) => NONE
+				   | (DataControl (VarData (n,t))) => SOME n
+				   | _ => NONE)
 				(control k)
 
 	fun ty k =   (fn (AnonControl t) => t

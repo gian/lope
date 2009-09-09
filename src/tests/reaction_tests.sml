@@ -8,6 +8,7 @@ struct
 	val tests = [
 	fn () => (* reactions *)
 	let
+		val _ = T.reset_ty_var ()
 		val p = T.ty_var_replace (Parse.parse_string 
 			("A { B { }\nreaction R { redex { B {} } reactum { B {} C {} } } }\n" ^ 
 			"D { E { }\nreaction R' { redex { F {} } reactum { G {} H {} } } }\n" ))
