@@ -3,7 +3,7 @@ sig
 	val reactions : Bigraph.lope_control Bigraph.bigraph -> Bigraph.lope_control Bigraph.bigraph list
 
 	val interference : Bigraph.lope_control Bigraph.bigraph list -> (Bigraph.lope_control Bigraph.bigraph * Bigraph.lope_control Bigraph.bigraph) list
-	val slice : Bigraph.lope_control Bigraph.bigraph list -> Bigraph.lope_control Bigraph.bigraph list list
+	val slice : (Bigraph.lope_control Bigraph.bigraph * Bigraph.lope_control Bigraph.bigraph) list -> Bigraph.lope_control Bigraph.bigraph list list
 end
 
 structure Reaction : REACTION =
@@ -45,8 +45,18 @@ struct
 		in
 			List.filter interferes (crossProduct (fn x => fn y => if x = y then NONE else SOME (x,y)) (r,r))
 		end
-			
-	fun slice _ = []
+		
+	(*TODO: Start with any reaction and build the set of the things that interfere with it,
+	   recursing up until you reach a cycle or a root (something affected by nothing) *)
+	fun slice s = 
+		let
+			fun has_edge j k = List.exists (fn (j',k') => j = j' andalso k = k')
+			fun preset j = List.filter (fn (k,l) => k = j)
+			fun postset j = List.filter (fn (k,l) => l = j)
+		
+		in
+			[]
+		end
 
 		
 end

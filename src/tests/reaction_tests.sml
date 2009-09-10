@@ -42,7 +42,34 @@ struct
 			val sr = interference r
 			val _ = Debug.debug 2 ("interference set:\n" ^ (String.concatWith "\n" (map (fn (x,y) => B.name x ^ ", " ^ B.name y) sr)))
 	in
-		assert("reaction_interf1", length sr = 0)
+		assert("reaction_interf1", length sr = 6) ;
+		assert("reaction_interf2", not (List.exists (fn (x,y) => x = y) sr)) 
+	end,
+
+	fn () => (* reaction_slice *)
+	let
+			val _ = T.reset_ty_var ()
+			val p = T.ty_var_replace (Parse.parse_string 
+			("A { reaction R { redex { B {} } reactum { C {} } } }\n" ^ 
+			 "D { reaction R' { redex { E {} } reactum { F {} } } }\n" ^ 
+			 "G { reaction R'' { redex { H {} } reactum { I {} } } }\n" ))
+
+			val _ = T.reset_constraints()
+			val p' = T.constrain p
+			val _ = Debug.debug 2 ("Constraint: " ^ B.ty_name p')
+			val _ = Debug.debug 2 (B.to_string p)
+			val c = T.get_constraints ()
+
+			val k = T.simplify_constraints p c
+			val _ = Debug.debug 2 (B.to_string p)
+			val r = reactions p
+			val _ = Debug.debug 2 ("Reaction set size: " ^ Int.toString (length r))
+			val sr = interference r
+			val _ = Debug.debug 2 ("interference set:\n" ^ (String.concatWith "\n" (map (fn (x,y) => B.name x ^ ", " ^ B.name y) sr)))
+			val ss = slice sr
+	in
+		assert("reaction_slice1", length ss = 6) ;
+		assert("reaction_slice2", not (List.exists (fn (x,y) => x = y) sr)) 
 	end
 	]
 	
