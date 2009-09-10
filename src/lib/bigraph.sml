@@ -12,6 +12,7 @@ sig
 				| TyUnknown
 				| TyVar of int
 				| TyComp of ty * ty list
+				| TyAComp of ty list
 				| TyArrow of ty * ty
 				| TyUniq of string option * int
 				| TyUnit
@@ -90,6 +91,7 @@ struct
 				| TyUnknown
 				| TyVar of int
 				| TyComp of ty * ty list
+				| TyAComp of ty list
 				| TyArrow of ty * ty
 				| TyUnit
 				| TyUniq of string option * int
@@ -147,6 +149,8 @@ struct
 	  | ty_name' (TyVar i) = "?X" ^ Int.toString i
 	  | ty_name' (TyComp (t, [])) = ty_name' t
 	  | ty_name' (TyComp (t, l)) = ty_name' t ^ "{" ^ (String.concatWith "," (map ty_name' l)) ^ "}"
+	  | ty_name' (TyAComp []) = "empty"
+	  | ty_name' (TyAComp l) = "{" ^ (String.concatWith "," (map ty_name' l)) ^ "}"
 	  | ty_name' (TyArrow (t1,t2)) = ty_name' t1 ^ " -> " ^ ty_name' t2
 	  | ty_name' (TyUniq (NONE,r)) = "<_@" ^ Int.toString r ^ ">" 
 	  | ty_name' (TyUniq (SOME n,r)) = "<" ^ n ^ "@" ^ Int.toString r ^ ">" 

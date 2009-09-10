@@ -21,12 +21,13 @@ struct
 	    assert ("reaction_collect3", B.name_opt (hd (tl k)) = SOME "R'") 
 	end,
 
-	fn () => (* reaction_sort *)
+	fn () => (* reaction_interf *)
 	let
 			val _ = T.reset_ty_var ()
 			val p = T.ty_var_replace (Parse.parse_string 
-			("A : T1 { B { }\nreaction R { redex { C : T2 {} } reactum { {} E {} } } }\n" ^ 
-			"F { G { }\nreaction R' { redex { H {} } reactum { I {} {} } } }\n" ))
+			("A { reaction R { redex { B {} } reactum { C {} } } }\n" ^ 
+			 "D { reaction R' { redex { E {} } reactum { F {} } } }\n" ^ 
+			 "G { reaction R'' { redex { H {} } reactum { I {} } } }\n" ))
 
 			val _ = T.reset_constraints()
 			val p' = T.constrain p
@@ -37,9 +38,11 @@ struct
 			val k = T.simplify_constraints p c
 			val _ = Debug.debug 2 (B.to_string p)
 			val r = reactions p
-			val _ = Debug.debug 2 ("reactions:\n" ^ (String.concatWith "\n" (map B.to_string r)))
+			val _ = Debug.debug 2 ("Reaction set size: " ^ Int.toString (length r))
+			val sr = interference r
+			val _ = Debug.debug 2 ("interference set:\n" ^ (String.concatWith "\n" (map (fn (x,y) => B.name x ^ ", " ^ B.name y) sr)))
 	in
-		assert("reaction_sort1", false)
+		assert("reaction_interf1", length sr = 0)
 	end
 	]
 	

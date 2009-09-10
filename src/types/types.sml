@@ -59,6 +59,7 @@ struct
 	  | ty_replace (B.TyCon(a,b)) = B.TyCon (ty_replace a, ty_replace b)
 	  | ty_replace (B.TyTuple k) = B.TyTuple (map ty_replace k)
 	  | ty_replace (B.TyComp (t,l)) = B.TyComp (ty_replace t, map ty_replace l)
+	  | ty_replace (B.TyAComp l) = B.TyAComp (map ty_replace l)
 	  | ty_replace b = b 
 
 	fun substinty h n B.TyUnknown = fresh_ty_var ()
@@ -67,6 +68,7 @@ struct
 	  | substinty h n (B.TyTuple k) = B.TyTuple (map (substinty h n) k)
 	  | substinty (B.TyComp(a,_)) n (B.TyComp(b,x)) = if a = b then n else B.TyComp(b,x)
 	  | substinty h n (B.TyComp (t,l)) = B.TyComp (substinty h n t, map (substinty h n) l)
+	  | substinty h n (B.TyAComp l) = B.TyAComp (map (substinty h n) l)
 	  | substinty (B.TyVar k1) n (B.TyVar k2) = if k1 = k2 then n else (B.TyVar k2)
 	  | substinty (B.TyName k1) n (B.TyName k2) = if k1 = k2 then n else (B.TyName k2)
 	  | substinty h n b = b 
@@ -103,6 +105,7 @@ struct
 						in
 							(add_constraint (B.TyComp(t,ch)) [k]; k)
 						end
+					  | B.TyAComp l => (add_constraint (B.TyAComp l) (map constrain (B.children b)); B.TyAComp l)
 					  | B.TyCon (t,t') => (add_constraint (B.TyCon(t,t')) (opt b (map constrain (B.children b))); B.TyCon(t,t'))
 					  | B.TyUnit => B.TyUnit
 					  | B.TyArrow (t1,t2) =>
@@ -130,8 +133,9 @@ struct
 								   symtab=symtab})) b; b)
 
 	fun wrap r [] = B.TyName "empty"
-	  | wrap r [k] = k
-	  | wrap r l = B.TyComp(r, l)
+	  | wrap r l = (case r of B.TyName x => B.TyComp (r, l)
+	                        | B.TyCon _ => B.TyComp(r,l)
+							| _ => B.TyAComp l)
 
 
 	fun ty_substitute b t1 t2 =
