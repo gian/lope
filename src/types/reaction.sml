@@ -51,12 +51,21 @@ struct
 	fun slice s = 
 		let
 			fun has_edge j k = List.exists (fn (j',k') => j = j' andalso k = k')
-			fun preset j = List.filter (fn (k,l) => k = j)
-			fun postset j = List.filter (fn (k,l) => l = j)
-		
+			fun preset j l = List.map (fn (x,y) => y) (List.filter (fn (k,_) => k = j) l)
+			fun postset j = List.filter (fn (_,l) => l = j)
+	
+			fun trace [] c = []
+			  | trace m c = 
+			  	let 
+					fun rmopts a b = List.filter (fn (_,x) => not (List.exists (fn y => x = y) a)) b
+					val p = (foldl (fn (l,n) => (preset l c) @ n) [] m)
+					fun mkuniq [] = []
+         			  | mkuniq (h::t) = h :: (List.filter (fn x => x <> h) (mkuniq t))
+				in
+					mkuniq (p @ trace p (rmopts p c))
+				end
 		in
-			[]
+			map (fn (n,m) => (trace [n] s)) s	
 		end
-
 		
 end
