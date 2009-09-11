@@ -33,7 +33,7 @@ struct
 					val B.TyArrow (b1redexty,b1reactumty) = B.ty b1
 					val B.TyArrow (b2redexty,b2reactumty') = B.ty b2
 				in
-					true (* T.overlaps b1reactumty b2redexty *) 
+					T.overlaps b1reactumty b2redexty 
 				end
 
 			local  

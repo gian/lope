@@ -50,9 +50,9 @@ struct
 	let
 			val _ = T.reset_ty_var ()
 			val p = T.ty_var_replace (Parse.parse_string 
-			("A { reaction R { redex { B {} } reactum { C {} } } }\n" ^ 
-			 "D { reaction R' { redex { E {} } reactum { F {} } } }\n" ^ 
-			 "G { reaction R'' { redex { H {} } reactum { I {} } } }\n" ))
+			("A { reaction R { redex { B : A {} } reactum { C {} } } }\n" ^ 
+			 "D { reaction R' { redex { C {} } reactum { F {} } } }\n" ^ 
+			 "G { reaction R'' { redex { H {} } reactum { I : A {} } } }\n" ))
 
 			val _ = T.reset_constraints()
 			val p' = T.constrain p
@@ -68,8 +68,7 @@ struct
 			val _ = Debug.debug 2 ("interference set:\n" ^ (String.concatWith "\n" (map (fn (x,y) => B.name x ^ ", " ^ B.name y) sr)))
 			val ss = slice sr
 	in
-		assert("reaction_slice1", length ss = 6) ;
-		assert("reaction_slice2", not (List.exists (fn (x,y) => x = y) sr)) 
+		assert("reaction_slice1", length sr = 2)
 	end
 	]
 	

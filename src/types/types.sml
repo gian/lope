@@ -18,6 +18,7 @@ sig
 	val get_constraints : unit -> (Bigraph.ty * Bigraph.ty list) list
 	val reset_constraints : unit -> unit
 	val infer : Bigraph.lope_control Bigraph.bigraph -> ty 
+	val overlaps : ty -> ty -> bool
 end
 
 structure Types : TYPES =
@@ -149,5 +150,19 @@ struct
 
 	fun simplify_constraints b [] = []
 	  | simplify_constraints b ((t1,t2)::t) = (t1,t2) :: (ty_substitute b t1 t2; simplify_constraints b (map (fn (x,y) => (x, (map (fn z => substinty t1 (wrap t1 t2) z) y))) t))
-	
+
+	fun overlaps (B.TyAComp []) (B.TyAComp []) = false
+	  | overlaps (B.TyAComp x) (B.TyAComp y) = not (List.all (fn t => List.all (fn k => not (overlaps t k)) y) x)
+	  | overlaps (B.TyComp (w,x)) (B.TyComp (y,z)) = overlaps w y andalso (List.all (fn t => List.all (fn k => not (overlaps t k)) z) x)
+	  | overlaps (B.TyComp (w,x)) (B.TyAComp z) = (List.all (fn t => List.all (fn k => not (overlaps t k)) z) x)
+	  | overlaps (B.TyAComp x) (B.TyComp (y,z)) = (List.all (fn t => List.all (fn k => not (overlaps t k)) z) x)
+	  | overlaps (B.TyName x) (B.TyName y) = x = y
+	  | overlaps (B.TyCon (w,x)) (B.TyCon (y,z)) = overlaps w y andalso overlaps x z
+	  | overlaps (B.TyArrow (w,x)) (B.TyArrow (y,z)) = overlaps w y andalso overlaps x z
+	  | overlaps (B.TyUnit) (B.TyUnit) = true
+	  | overlaps x (B.TyComp (t, _)) = overlaps x t
+	  | overlaps (B.TyUniq (NONE,n)) (B.TyUniq (NONE,m)) = n = m
+	  | overlaps (B.TyUniq (SOME x,_)) (B.TyUniq (SOME y,_)) = x = y
+	  | overlaps x y = (print ("Unhandled Case: " ^ B.ty_name x ^ " and " ^ B.ty_name y ^ "\n"); false)
+	  
 end

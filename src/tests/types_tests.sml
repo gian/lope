@@ -86,6 +86,23 @@ struct
 	in
 		assert("constrain_typed1", List.exists (fn (B.TyName "T1", [B.TyVar 1, 
 					B.TyArrow _]) => true | _ => false) c)
+	end,
+
+	fn () => (* overlaps *)
+	let
+		
+	in
+		assert("overlaps1", overlaps (B.TyName "x") (B.TyName "x")) ;
+		assert("overlaps2", not (overlaps (B.TyName "x") (B.TyName "y"))) ;
+		assert("overlaps3", overlaps (B.TyCon (B.TyName "z", B.TyName "x")) (B.TyCon (B.TyName "z", B.TyName "x"))) ;
+		assert("overlaps4", not (overlaps (B.TyCon (B.TyName "z", B.TyName "y")) (B.TyCon (B.TyName "z", B.TyName "x")))) ;
+		assert("overlaps5", overlaps (B.TyComp (B.TyName "x", [])) (B.TyComp (B.TyName "x", [B.TyName "y"]))) ;
+		assert("overlaps6", not (overlaps (B.TyComp (B.TyName "y", [])) (B.TyComp (B.TyName "x", [B.TyName "z"])))) ;
+		assert("overlaps7", overlaps (B.TyArrow (B.TyName "y", B.TyName "z")) (B.TyArrow (B.TyName "y", B.TyName "z"))) ;
+		assert("overlaps8", not (overlaps (B.TyArrow (B.TyName "y", B.TyName "z")) (B.TyArrow (B.TyName "q", B.TyName "z")))) ;
+		assert("overlaps9", overlaps (B.TyAComp [B.TyName "x"]) (B.TyAComp [B.TyName "x"])) ;
+		assert("overlaps10", not (overlaps (B.TyAComp [B.TyName "x"]) (B.TyAComp [B.TyName "y"]))) ;
+		assert("overlaps11", not (overlaps (B.TyAComp []) (B.TyAComp []))) 
 	end
 	]
 	
