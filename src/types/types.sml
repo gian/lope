@@ -160,9 +160,13 @@ struct
 	  | overlaps (B.TyCon (w,x)) (B.TyCon (y,z)) = overlaps w y andalso overlaps x z
 	  | overlaps (B.TyArrow (w,x)) (B.TyArrow (y,z)) = overlaps w y andalso overlaps x z
 	  | overlaps (B.TyUnit) (B.TyUnit) = true
-	  | overlaps x (B.TyComp (t, _)) = overlaps x t
 	  | overlaps (B.TyUniq (NONE,n)) (B.TyUniq (NONE,m)) = n = m
 	  | overlaps (B.TyUniq (SOME x,_)) (B.TyUniq (SOME y,_)) = x = y
-	  | overlaps x y = (print ("Unhandled Case: " ^ B.ty_name x ^ " and " ^ B.ty_name y ^ "\n"); false)
+	  | overlaps (B.TyUniq x) (B.TyUniq y) = false
+	  | overlaps x (B.TyComp (w,y)) = overlaps x w orelse not (List.all (fn k => not (overlaps x k)) y) 
+	  | overlaps x (B.TyAComp y) = not (List.all (fn k => not (overlaps x k)) y) 
+	  | overlaps (B.TyCon (t,B.TyName "site")) t' = overlaps t t'
+	  | overlaps t' (B.TyCon (t,B.TyName "site")) = overlaps t t'
+	  | overlaps x y = (Debug.debug 2 ("Unhandled Case: " ^ B.ty_name x ^ " and " ^ B.ty_name y ^ "\n"); false)
 	  
 end

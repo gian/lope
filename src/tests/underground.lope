@@ -1,0 +1,64 @@
+Underground {
+	KingsCross : station {
+	        $West : train
+	        $East : train
+	}
+
+	RussellSquare : station {
+	        $West : train
+	        $East : train
+	}
+
+	Holborn : station {
+	        $West : train
+	        $East : train
+	}
+
+	T1 : train { }
+	T2 : train { }
+
+	reaction WestStationTrain { 
+		redex { 
+			s : station { 
+				t : train {}
+			}
+ 		} 
+		
+		reactum { 
+			t' : broken {
+		
+			}
+		}
+
+	}
+
+	reaction KCStationTrain { 
+		redex { 
+			KingsCross : station { 
+				t : train {}
+			}
+ 		} 
+		
+		reactum { 
+			KingsCross : station {
+		
+			}
+		}
+	}
+
+	reaction T1Train { 
+		redex { 
+			T1 : train { }
+ 		} 
+		
+		reactum { 
+			T1 : train {
+				Passenger { }
+			}
+		}
+	}
+
+
+
+}
+
