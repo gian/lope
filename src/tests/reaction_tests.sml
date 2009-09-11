@@ -70,13 +70,13 @@ struct
 		assert("reaction_interf2", not (List.exists (fn (x,y) => x = y) sr)) 
 	end,
 
-	fn () => (* reaction_slice *)
+	fn () => (* reaction_slice1 *)
 	let
 			val _ = T.reset_ty_var ()
 			val p = T.ty_var_replace (Parse.parse_string 
 			("A { reaction R { redex { B : A {} } reactum { C {} } } }\n" ^ 
 			 "D { reaction R' { redex { C {} } reactum { F {} } } }\n" ^ 
-			 "G { reaction R'' { redex { H {} } reactum { I : A {} } } }\n" ))
+			 "G { reaction R'' { redex { H {} } reactum { I {} } } }\n" ))
 
 			val _ = T.reset_constraints()
 			val p' = T.constrain p
@@ -90,10 +90,36 @@ struct
 			val _ = Debug.debug 2 ("Reaction set size: " ^ Int.toString (length r))
 			val sr = interference r
 			val _ = Debug.debug 2 ("interference set:\n" ^ (String.concatWith "\n" (map (fn (x,y) => B.name x ^ ", " ^ B.name y) sr)))
-			val ss = slice sr
-			val _ = Debug.debug 2 ("slice set:\n" ^ (String.concatWith "\nNext:\n" (map (fn y => (String.concatWith "\n" (map (fn x => B.name x) y))) ss)))
+			val ss = slice r sr
+			val _ = Debug.debug 2 ("slice set:\n" ^ (String.concatWith "\nSlice:\n" (map (fn y => (String.concatWith "\n" (map (fn x => B.name x) y))) ss)))
 	in
-		assert("reaction_slice1", length sr = 2)
+		assert("reaction_slice1", length ss = 2)
+	end,
+	
+	fn () => (* reaction_slice2 *)
+	let
+			val _ = T.reset_ty_var ()
+			val p = T.ty_var_replace (Parse.parse_string 
+			("A { reaction R { redex { B  {} } reactum { C {} } } }\n" ^ 
+			 "D { reaction R' { redex { D {} } reactum { E {} } } }\n" ^ 
+			 "G { reaction R'' { redex { F {} } reactum { I {} } } }\n" ))
+
+			val _ = T.reset_constraints()
+			val p' = T.constrain p
+			val _ = Debug.debug 2 ("Constraint: " ^ B.ty_name p')
+			val _ = Debug.debug 2 (B.to_string p)
+			val c = T.get_constraints ()
+
+			val k = T.simplify_constraints p c
+			val _ = Debug.debug 2 (B.to_string p)
+			val r = reactions p
+			val _ = Debug.debug 2 ("Reaction set size: " ^ Int.toString (length r))
+			val sr = interference r
+			val _ = Debug.debug 2 ("interference set:\n" ^ (String.concatWith "\n" (map (fn (x,y) => B.name x ^ ", " ^ B.name y) sr)))
+			val ss = slice r sr
+			val _ = Debug.debug 2 ("slice set:\n" ^ (String.concatWith "\nSlice:\n" (map (fn y => (String.concatWith "\n" (map (fn x => B.name x) y))) ss)))
+	in
+		assert("reaction_slice2", length ss = 3)
 	end
 	]
 	
