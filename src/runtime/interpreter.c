@@ -42,9 +42,19 @@ node_t *new_node(identifier_t id, symbol_t symbol, size_t num_children)
 int match_graph(node_t *graph, node_t *pattern)
 {
 	/* populate the "match" field of the pattern */
+	
+	/* Match the root of the pattern first. */
+	if(pattern->symbol == SYM_ANY && pattern->num_children == 0) {
+		/* the "anything" node with no children matches any subtree */
+		pattern->match = graph;
+		return TRUE;
+	}
 
+	if(pattern->num_children != graph->num_children) return FALSE;
 
-	return FALSE;
+	if(pattern->symbol == SYM_ANY) return TRUE;
+
+	return pattern->symbol == graph->symbol;
 }
 
 void print_node(node_t *node) {
