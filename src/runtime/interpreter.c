@@ -1,3 +1,8 @@
+/******************************************************************************
+* Lope Programming Language
+* Copyright (c) 2009 Gian Perrone
+* Runtime System
+******************************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
 
