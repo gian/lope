@@ -8,14 +8,37 @@
 #include <string.h>
 #include <assert.h>
 
+/* Symbol Types */
 #define SYM_ANY 0L
+#define SYM_WORLD 1L
+#define SYM_OPERATOR 2L
+#define SYM_INT 3L
+#define SYM_IDENT 4L
+
+/* "hard" operators */
+#define OPER_PLUS 1L
+#define OPER_SUB  2L
+#define OPER_MULT 3L
+#define OPER_DIV  4L
+
 #define TRUE 1
 #define FALSE 0
 
 typedef long identifier_t;
-typedef long symbol_t;
+typedef long symbol_type_t;
+typedef long identifier_t;
 
 long g_nid = 1;
+
+type union {
+	operator_t sym_operator;
+	int sym_int;
+} symbol_data_t;
+
+typedef struct {
+	symbol_data_t data;
+	symbol_type_t type;
+} symbol_t;
 
 typedef struct node_t {
 	identifier_t node_id;
@@ -62,12 +85,12 @@ int match_node(node_t *graph, node_t *pattern)
 
 	if(pattern->num_children != graph->num_children) return FALSE;
 
-	if(pattern->symbol == SYM_ANY) {
+	if(pattern->symbol.type == SYM_ANY) {
 		pattern->match = graph;
 		return TRUE;
 	}
 
-	if(pattern->symbol == graph->symbol) {
+	if(pattern->symbol.data == graph->symbol.data) {
 		pattern->match = graph;
 		return TRUE;
 	}
@@ -108,8 +131,30 @@ node_t *match_graph_anywhere(node_t *graph, node_t *pattern)
 node_t *apply_reactum(node_t *reactum)
 {
 	// We need to copy the symbol from the original graph before replacing the node.
-	if(reactum->symbol == SYM_ANY) {
-		reactum->symbol = reactum->match->match->symbol;
+	if(reactum->symbol.type == SYM_ANY) {
+		reactum->symbol.type = reactum->match->match->symbol.type;
+		reactum->symbol.data = reactum->match->match->symbol.data;
+	}
+
+	if(reactum->match != NULL && reactum->match->num_children == 0 && reactum->num_children == 0 && reactum->match->match->num_children > 0) {
+		printf("APPLY: %ld %ld %ld\n", reactum->match->num_children,
+									reactum->num_children,
+									reactum->match->match->num_children);
+
+		/* Redex did not match children, so attach them to the new graph. */
+		node_t *newreactum = new_node(nodeid(),
+									reactum->symbol,
+									reactum->match->match->num_children);
+		newreactum->match = reactum->match;
+		int i;
+		for(i=0;i<reactum->match->match->num_children;i++) {
+			newreactum->children[i] = reactum->match->match->children[i];
+		}
+
+		/*TODO: garbage collect this instead */
+		free(reactum);
+		reactum = newreactum;
+
 	}
 	
 	reactum->match = NULL;
@@ -188,13 +233,36 @@ node_t *apply_all_reactions(node_t *graph, reaction_t *head)
 
 char *sym_to_string(symbol_t s) 
 {
-	if(s == SYM_ANY) return "_";
+	if(s.type == SYM_ANY) return "_";
 
-	char b[16];
+	if(s.type == SYM_OPERATOR) {
+		switch(s.data.sym_operator) {
+			case OPER_PLUS:
+				return "+";
+				break;
+			case OPER_SUB:
+				return "-";
+				break;
+			case OPER_MULT:
+				return "*";
+				break;
+			case OPER_DIV:
+				return "/";
+				break;
+			default:
+				return "<?>";
+		}
+	}
 
-	sprintf(b, "%ld", s);
+	if(s.type == SYM_INT) {
+		char b[16];
 
-	return strdup(b);
+		sprintf(b, "%d", s.data.sym_int);
+
+		return strdup(b);
+	}
+
+	return "<unknown symbol>";
 }
 
 void print_node(node_t *node) {
