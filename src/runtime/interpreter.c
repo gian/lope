@@ -137,16 +137,35 @@ node_t *update_references(node_t *graph, node_t *src, node_t *dest)
 	return newhead;
 }
 
+node_t *instantiate_reactum(node_t *reactum) 
+{
+	node_t *n = new_node(nodeid(),reactum->symbol,reactum->num_children);
+
+	n->match = reactum->match;
+
+	int i;
+	for(i=0;i<reactum->num_children;i++) {
+		n->children[i] = instantiate_reactum(reactum->children[i]);
+	}
+
+	return n;
+}
+
 node_t *apply_reaction(node_t *graph, reaction_t *reaction)
 {
 	node_t *reaction_site = match_graph_anywhere(graph, reaction->redex);
 
 	/* This rule does not match anywhere in the graph. */
-	if(reaction_site == NULL) return NULL;
+	if(reaction_site == NULL) {
+		printf("[rule '%s' does not match]\n", reaction->name);
+		return NULL;
+	}
 
 	printf("[applied rule '%s' at @%ld, rule count: %ld]\n", reaction->name, reaction_site->node_id, reaction->count+1);
 
-	node_t *subgraph = apply_reactum(reaction->reactum);
+	node_t *reactum = instantiate_reactum(reaction->reactum); 
+
+	node_t *subgraph = apply_reactum(reactum);
 	graph = update_references(graph,reaction_site,subgraph);
 
 	reaction->count++;
@@ -158,7 +177,9 @@ node_t *apply_reaction(node_t *graph, reaction_t *reaction)
 node_t *apply_all_reactions(node_t *graph, reaction_t *head)
 {
 	while(head != NULL) {
-		graph = apply_reaction(graph,head);
+		printf("[attempting to apply '%s']\n", head->name);
+		node_t *newgraph = apply_reaction(graph,head);
+		if(newgraph != NULL) graph = newgraph;
 		head = head->next;
 	}
 
@@ -197,42 +218,52 @@ void print_node(node_t *node) {
 
 int main(int argc, char **argv)
 {
-	node_t *root = new_node(nodeid(), 1, 2);
-	root->children[0] = new_node(nodeid(), 2, 0); 
-	root->children[1] = new_node(nodeid(), 3, 0);
+	node_t *root = new_node(nodeid(), 1, 0);
 
 	print_node(root);
 
 	reaction_t reaction;
 
-	reaction.name = "1to666";
+	reaction.name = "expand";
 	reaction.count = 0;
 	reaction.next = NULL;
 
-	node_t *pat = new_node(nodeid(), 1, 2);
-	pat->children[0] = new_node(nodeid(), SYM_ANY, 0); 
-	pat->children[1] = new_node(nodeid(), SYM_ANY, 0);
+	node_t *pat = new_node(nodeid(), 1, 0);
 
 	reaction.redex = pat;
 
-	node_t *reactum = new_node(nodeid(), 666, 2);
+	node_t *reactum = new_node(nodeid(), 1, 1);
 	reactum->match = pat;
-	reactum->children[0] = new_node(nodeid(), SYM_ANY, 0);
-	reactum->children[0]->match = pat->children[0];
-	reactum->children[1] = new_node(nodeid(), SYM_ANY, 1);
-	reactum->children[1]->match = pat->children[1];
-	reactum->children[1]->children[0] = new_node(nodeid(), 333, 0);
+	reactum->children[0] = new_node(nodeid(), 1, 0);
 	
 	reaction.reactum = reactum;
 
+	reaction_t r2;
+
+	r2.name = "contract";
+	r2.count = 0;
+
+	r2.redex = new_node(nodeid(), 1, 1);
+	r2.redex->children[0] = new_node(nodeid(), 1, 1);
+	r2.redex->children[0]->children[0] = new_node(nodeid(), 1, 0);
+
+	r2.reactum = new_node(nodeid(),2,1);
+	r2.reactum->match = r2.redex;
+	r2.reactum->children[0] = new_node(nodeid(), 1, 0);
+
+	r2.next = NULL;
+
+	reaction.next = &r2; 
+
 	int i;
 	for(i=0;i<100;i++) {
-		root = apply_all_reactions(root, &reaction);
+		node_t *newroot = apply_all_reactions(root, &reaction);
+		if(newroot != NULL) root = newroot;
 		print_node(root);
 		printf("[iteration %d complete.]\n", i);
 	}
 
-	print_node(root);
+	if(root != NULL) print_node(root);
 
 	return 0;
 }
