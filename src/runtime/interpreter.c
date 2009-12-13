@@ -24,19 +24,20 @@
 #define TRUE 1
 #define FALSE 0
 
+/* File magic */
+#define FILE_MAGIC 44442266
+
 typedef long identifier_t;
+typedef long operator_t;
 typedef long symbol_type_t;
-typedef long identifier_t;
 
 long g_nid = 1;
 
-type union {
-	operator_t sym_operator;
-	int sym_int;
-} symbol_data_t;
-
 typedef struct {
-	symbol_data_t data;
+	union symbol_data_t { 
+		operator_t sym_operator;
+		int sym_int;
+	} data;
 	symbol_type_t type;
 } symbol_t;
 
@@ -60,6 +61,19 @@ identifier_t nodeid( void ) {
 	return g_nid++;
 }
 
+int symbol_compare(symbol_t s1, symbol_t s2)
+{
+	if(s1.type != s2.type) return FALSE;
+
+	if(s1.type == SYM_OPERATOR)
+		return s1.data.sym_operator == s2.data.sym_operator;
+
+	if(s1.type == SYM_INT)
+		return s1.data.sym_int == s2.data.sym_int;
+
+	return FALSE;
+}
+
 node_t *new_node(identifier_t id, symbol_t symbol, size_t num_children) 
 {
 	node_t *n = (node_t *)malloc(sizeof(node_t) + (num_children * sizeof(node_t *)));
@@ -77,7 +91,7 @@ int match_node(node_t *graph, node_t *pattern)
 	/* populate the "match" field of the pattern */
 	
 	/* Match the root of the pattern first. */
-	if(pattern->symbol == SYM_ANY && pattern->num_children == 0) {
+	if(pattern->symbol.type == SYM_ANY && pattern->num_children == 0) {
 		/* the "anything" node with no children matches any subtree */
 		pattern->match = graph;
 		return TRUE;
@@ -90,7 +104,7 @@ int match_node(node_t *graph, node_t *pattern)
 		return TRUE;
 	}
 
-	if(pattern->symbol.data == graph->symbol.data) {
+	if(symbol_compare(pattern->symbol, graph->symbol)) {
 		pattern->match = graph;
 		return TRUE;
 	}
@@ -283,14 +297,109 @@ void print_node(node_t *node) {
 	}
 }
 
+int save_node(FILE *fp, node_t *root)
+{
+	fwrite(&root->node_id, sizeof(long), 1, fp);
+	fwrite(&root->num_children, sizeof(size_t), 1, fp);
+	fwrite(&root->symbol, sizeof(symbol_t), 1, fp);
+
+	int i;
+	for(i=0;i<root->num_children; i++) {
+		save_node(fp,root->children[i]);
+	}
+
+	return TRUE;
+}
+
+int save_graph(FILE *fp, node_t *root)
+{
+	int magic = FILE_MAGIC;
+
+	fwrite(&magic, sizeof(int), 1, fp);
+
+	return save_node(fp,root);
+}
+
+node_t *load_node(FILE *fp)
+{
+	long id;
+	size_t arity;
+	symbol_t symbol;
+
+	node_t *n;
+
+	fread(&id, sizeof(long), 1, fp);
+	fread(&arity, sizeof(size_t), 1, fp);
+	fread(&symbol, sizeof(symbol_t), 1, fp);
+
+	n = new_node(id, symbol, arity);
+
+	size_t i;
+	for(i=0;i<arity;i++) {
+		n->children[i] = load_node(fp);
+	}
+
+	return n;
+}
+
+node_t *load_graph(FILE *fp)
+{
+	node_t *root;
+
+	int magic;
+
+	fread(&magic, sizeof(int), 1, fp);
+
+	if(magic != FILE_MAGIC) {
+		fprintf(stderr, "Error: input is not a valid Lope binary.\n");
+		return NULL;
+	}
+
+	root = load_node(fp);
+
+	return root;
+}
+
 
 int main(int argc, char **argv)
 {
-	node_t *root = new_node(nodeid(), 1, 0);
+	symbol_t s1;
+	s1.type = SYM_OPERATOR;
+	s1.data.sym_operator = OPER_PLUS;
+
+	symbol_t s2;
+	s2.type = SYM_INT;
+	s2.data.sym_int = 32;
+
+	symbol_t s3;
+	s3.type = SYM_INT;
+	s3.data.sym_int = 64;
+
+	node_t *root = new_node(nodeid(), s1, 2);
+	root->children[0] = new_node(nodeid(), s2, 0);
+	root->children[1] = new_node(nodeid(), s2, 0);
 
 	print_node(root);
 
-	reaction_t reaction;
+	FILE *fp = fopen("test.lbc", "w");
+
+	save_graph(fp, root);
+
+	fclose(fp);
+
+	node_t *root2;
+
+	FILE *fp2 = fopen("test2.lbc", "r");
+	
+	root2 = load_graph(fp);
+
+	if(root2 == NULL) return 1;
+
+	fclose(fp2);
+
+	print_node(root2);
+
+/*	reaction_t reaction;
 
 	reaction.name = "expand";
 	reaction.count = 0;
@@ -331,7 +440,7 @@ int main(int argc, char **argv)
 		printf("[iteration %d complete.]\n", i);
 	}
 
-	if(root != NULL) print_node(root);
+	if(root != NULL) print_node(root);*/
 
 	return 0;
 }
