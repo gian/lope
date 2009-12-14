@@ -73,28 +73,112 @@ typedef struct reaction_t {
 	long count; /* for statistical purposes */
 	struct reaction_t *next;
 } reaction_t;
+/* Hackety hackety hack */
+node_t *idtable[2048] = {NULL};
+kind_t *kindtable[2048] = {NULL};
+int kindorder[2048] = {0};
 
 identifier_t nodeid( void ) {
 	return g_nid++;
 }
 
-int symbol_compare(symbol_t s1, symbol_t s2)
+int is_kind(symbol_type_t t, kind_t k)
 {
-	if(s1.type != s2.type) return FALSE;
-
-	if(s1.type == SYM_OPERATOR)
-		return s1.data.sym_operator == s2.data.sym_operator;
-
-	if(s1.type == SYM_INT)
-		return s1.data.sym_int == s2.data.sym_int;
+	int i;
+	for(i=0;i<kindorder[t];i++) {
+		if(kindtable[t][i] == k) return TRUE;
+	}
 
 	return FALSE;
 }
 
-/* Hackety hackety hack */
-node_t *idtable[2048] = {NULL};
-kind_t *kindtable[2048] = {NULL};
-int kindorder[2048] = {0};
+int symbol_compare(symbol_t s1, symbol_t s2)
+{
+	if(s1.type == SYM_OPERATOR && 
+		s1.type == s2.type &&
+		s1.data.sym_operator != s2.data.sym_operator)
+		return FALSE;
+
+	if(s1.type == SYM_INT && 
+		s1.type == s2.type &&
+		s1.data.sym_int != s2.data.sym_int)
+		return FALSE;
+
+	/* Kinding rules:
+		s1_t	s1_k	s2_t	s2_k	cond
+		ANY		NODE	ANY		NODE	K1 = K2 (true)
+		ANY		NODE	ANY		K2		K1 = K2 = NODE
+		ANY		NODE	t2		NODE	t2 < K1 (true)
+		ANY		NODE	t2		K2		t2 < K1 (true)
+		ANY		K1		ANY		NODE	K1 = K2 = NODE
+		ANY		K1		ANY		K2		K1 = K2
+		ANY		K1		t2		NODE	t2 < K1
+		ANY		K1		t2		K2		t2 < K1
+		t1		NODE	ANY		NODE	t1 < K2 (true)
+		t1		NODE	ANY		K2		t1 < K2
+		t1		NODE	t2		NODE	t1 = t2, t1 < K2, t2 < K1
+		t1		NODE	t2		K2		t1 = t2, t1 < K2
+		t1		K1		ANY		NODE	t1 < K2 (true)
+		t1		K1		ANY		K2		t1 < K2
+		t1		K1		t2		NODE	t1 = t2, t2 < K1
+		t1		K1		t2		K2		t1 = t2. t1 < K2, t2 < K1
+	
+	The ugliest logical statement in the universe:
+	*/
+	if(s1.type == SYM_ANY) {
+		if(s1.kind == KIND_NODE) {
+			if(s2.type == SYM_ANY) {
+				if(s2.kind == KIND_NODE) {
+					return TRUE;
+				} else {
+					return s1.kind == s2.kind;
+				}
+			} else {
+				return TRUE;
+			}
+		} else {
+			if(s2.type == SYM_ANY) {
+				return s1.kind == s2.kind;
+			} else {
+				return is_kind(s2.type,s1.kind);
+			}
+		}
+	} else {
+		if(s1.kind == KIND_NODE) {
+			if(s2.type == SYM_ANY) {
+				if(s2.kind == KIND_NODE) {
+					return TRUE;
+				} else {
+					return is_kind(s1.type,s2.kind);
+				}
+			} else {
+				if(s2.kind == KIND_NODE) {
+					return s1.type == s2.type;
+				} else {
+					return s1.type == s2.type && is_kind(s1.type,s2.kind);
+				}
+			}
+		} else {
+			if(s2.type == SYM_ANY) {
+				if(s2.kind == KIND_NODE) {
+					return TRUE;
+				} else {
+					return is_kind(s1.type,s2.kind);
+				}
+			} else {
+				if(s2.kind == KIND_NODE) {
+					return s1.type == s2.type && is_kind(s2.type,s1.kind);
+				} else {
+					return s1.type == s2.type &&
+							is_kind(s1.type,s2.kind) &&
+							is_kind(s2.type,s1.kind);
+				}
+			}
+		}
+	}
+
+	return FALSE;
+}
 
 void initialise_kinds()
 {
@@ -318,36 +402,41 @@ node_t *apply_all_reactions(node_t *graph, reaction_t *head)
 
 char *sym_to_string(symbol_t s) 
 {
-	if(s.type == SYM_ANY) return "_";
+	char buf[1024];
+	char tybuf[512];
+
+	if(s.type == SYM_ANY) sprintf(tybuf,"_");
 
 	if(s.type == SYM_OPERATOR) {
 		switch(s.data.sym_operator) {
 			case OPER_PLUS:
-				return "+";
+				sprintf(tybuf,"+");
 				break;
 			case OPER_SUB:
-				return "-";
+				sprintf(tybuf,"-");
 				break;
 			case OPER_MULT:
-				return "*";
+				sprintf(tybuf,"*");
 				break;
 			case OPER_DIV:
-				return "/";
+				sprintf(tybuf,"/");
 				break;
 			default:
-				return "<?>";
+				sprintf(tybuf,"<?>");
 		}
 	}
 
 	if(s.type == SYM_INT) {
-		char b[16];
-
-		sprintf(b, "%d", s.data.sym_int);
-
-		return strdup(b);
+		sprintf(tybuf, "%d", s.data.sym_int);
 	}
 
-	return "<unknown symbol>";
+	if(s.kind != 0) {
+		sprintf(buf, "(%s : %ld :: %ld)", tybuf, s.type, s.kind);
+	} else {
+		sprintf(buf, "(%s : %ld)", tybuf, s.type);
+	}
+
+	return strdup(buf);
 }
 
 void print_node(node_t *node) {
@@ -454,18 +543,21 @@ int main(int argc, char **argv)
 	symbol_t s1;
 	s1.type = SYM_OPERATOR;
 	s1.data.sym_operator = OPER_PLUS;
+	s1.kind = 0;
 
 	symbol_t s2;
 	s2.type = SYM_INT;
 	s2.data.sym_int = 32;
+	s2.kind = 0;
 
 	symbol_t s3;
 	s3.type = SYM_INT;
 	s3.data.sym_int = 64;
+	s3.kind = 0;
 
 	node_t *root = new_node(nodeid(), s1, 2);
 	root->children[0] = new_node(nodeid(), s2, 0);
-	root->children[1] = new_node(nodeid(), s2, 0);
+	root->children[1] = new_node(nodeid(), s3, 0);
 
 	print_node(root);
 
@@ -487,12 +579,38 @@ int main(int argc, char **argv)
 
 	print_node(root2);
 
-/*	reaction_t reaction;
+	root2->symbol.kind = KIND_COMPUTATION;
+	root2->symbol.type = SYM_ANY;
+	print_node(root2);
+
+	reaction_t reaction;
 
 	reaction.name = "expand";
 	reaction.count = 0;
 	reaction.next = NULL;
+	reaction.redex = root2;
 
+	symbol_t s4;
+	s3.type = SYM_ANY;
+	
+	node_t *reactum = new_node(nodeid(), s3, 0);
+	reactum->match = root2;
+
+	reaction.reactum = reactum;
+
+	int i;
+	for(i=0;i<5;i++) {
+		node_t *newroot = apply_all_reactions(root, &reaction);
+		if(newroot != NULL) root = newroot;
+		print_node(root);
+		printf("[iteration %d complete.]\n", i);
+	}
+
+	if(root != NULL) print_node(root);
+
+
+
+/*
 	node_t *pat = new_node(nodeid(), 1, 0);
 
 	reaction.redex = pat;
