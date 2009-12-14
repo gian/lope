@@ -1,1 +1,1 @@
-all: interpreter
+all: interpreter assembler
