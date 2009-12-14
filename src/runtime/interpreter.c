@@ -14,6 +14,20 @@
 #define SYM_OPERATOR 2L
 #define SYM_INT 3L
 #define SYM_IDENT 4L
+#define SYM_BOOL 5L
+#define SYM_REACTION 6L
+#define SYM_REDEX 7L
+#define SYM_REACTUM 8L
+/* Types < 32 are reserved.  > 32 are free for custom use */
+
+/* Kinds */
+#define KIND_NODE 0L
+#define KIND_COMPUTATION 1L
+#define KIND_VALUE 2L
+#define KIND_REACTION 3L
+#define KIND_REDEX 4L
+#define KIND_REACTUM 5L
+/* Kinds < 32.  > 32 are free for custom use */
 
 /* "hard" operators */
 #define OPER_PLUS 1L
@@ -30,6 +44,7 @@
 typedef long identifier_t;
 typedef long operator_t;
 typedef long symbol_type_t;
+typedef long kind_t;
 
 long g_nid = 1;
 
@@ -39,6 +54,7 @@ typedef struct {
 		int sym_int;
 	} data;
 	symbol_type_t type;
+	kind_t kind;	/* Only used in matching, not kind assignment */
 } symbol_t;
 
 typedef struct node_t {
@@ -53,7 +69,8 @@ typedef struct reaction_t {
 	const char *name;
 	node_t *redex;
 	node_t *reactum;
-	long count;
+	node_t *scope;
+	long count; /* for statistical purposes */
 	struct reaction_t *next;
 } reaction_t;
 
@@ -72,6 +89,60 @@ int symbol_compare(symbol_t s1, symbol_t s2)
 		return s1.data.sym_int == s2.data.sym_int;
 
 	return FALSE;
+}
+
+/* Hackety hackety hack */
+node_t *idtable[2048] = {NULL};
+kind_t *kindtable[2048] = {NULL};
+int kindorder[2048] = {0};
+
+void initialise_kinds()
+{
+	kindtable[SYM_ANY] = (kind_t *)malloc(sizeof(kind_t)*1);
+	kindtable[SYM_ANY][0] = KIND_NODE;
+	kindorder[SYM_ANY] = 1;
+
+	kindtable[SYM_WORLD] = (kind_t *)malloc(sizeof(kind_t)*1);
+	kindtable[SYM_WORLD][0] = KIND_NODE;
+	kindorder[SYM_WORLD] = 1;
+
+	kindtable[SYM_OPERATOR] = (kind_t *)malloc(sizeof(kind_t)*2);
+	kindtable[SYM_OPERATOR][0] = KIND_NODE;
+	kindtable[SYM_OPERATOR][1] = KIND_COMPUTATION;
+	kindorder[SYM_OPERATOR] = 2;
+
+	kindtable[SYM_INT] = (kind_t *)malloc(sizeof(kind_t)*3);
+	kindtable[SYM_INT][0] = KIND_NODE;
+	kindtable[SYM_INT][1] = KIND_COMPUTATION;
+	kindtable[SYM_INT][2] = KIND_VALUE;
+	kindorder[SYM_INT] = 3;
+
+	kindtable[SYM_REACTION] = (kind_t *)malloc(sizeof(kind_t)*2);
+	kindtable[SYM_REACTION][0] = KIND_NODE;
+	kindtable[SYM_REACTION][1] = KIND_REACTION;
+	kindorder[SYM_REACTION] = 2;
+
+	kindtable[SYM_REDEX] = (kind_t *)malloc(sizeof(kind_t)*2);
+	kindtable[SYM_REDEX][0] = KIND_NODE;
+	kindtable[SYM_REDEX][1] = KIND_REDEX;
+	kindorder[SYM_REDEX] = 2;
+
+	kindtable[SYM_REACTUM] = (kind_t *)malloc(sizeof(kind_t)*2);
+	kindtable[SYM_REACTUM][0] = KIND_NODE;
+	kindtable[SYM_REACTUM][1] = KIND_REACTUM;
+	kindorder[SYM_REACTUM] = 2;
+}
+
+void insert_id(identifier_t id, node_t *node)
+{
+	assert(id < 2048);
+
+	idtable[id] = node;
+}
+
+node_t *lookup_id(identifier_t id)
+{
+	return idtable[id];
 }
 
 node_t *new_node(identifier_t id, symbol_t symbol, size_t num_children) 
@@ -301,6 +372,14 @@ int save_node(FILE *fp, node_t *root)
 {
 	fwrite(&root->node_id, sizeof(long), 1, fp);
 	fwrite(&root->num_children, sizeof(size_t), 1, fp);
+
+	if(root->match == NULL) {
+		identifier_t m = 0L;
+		fwrite(&m, sizeof(identifier_t), 1, fp);
+	} else {
+		fwrite(&root->match->node_id, sizeof(identifier_t), 1, fp);
+	}
+
 	fwrite(&root->symbol, sizeof(symbol_t), 1, fp);
 
 	int i;
@@ -325,14 +404,22 @@ node_t *load_node(FILE *fp)
 	long id;
 	size_t arity;
 	symbol_t symbol;
+	long match_id;
 
 	node_t *n;
 
 	fread(&id, sizeof(long), 1, fp);
 	fread(&arity, sizeof(size_t), 1, fp);
+	fread(&match_id, sizeof(long), 1, fp);
 	fread(&symbol, sizeof(symbol_t), 1, fp);
 
 	n = new_node(id, symbol, arity);
+
+	insert_id(id, n);
+
+	if(match_id > 0) {
+		n->match = lookup_id(match_id);
+	}
 
 	size_t i;
 	for(i=0;i<arity;i++) {
@@ -360,9 +447,10 @@ node_t *load_graph(FILE *fp)
 	return root;
 }
 
-
 int main(int argc, char **argv)
 {
+	initialise_kinds();
+
 	symbol_t s1;
 	s1.type = SYM_OPERATOR;
 	s1.data.sym_operator = OPER_PLUS;
@@ -389,7 +477,7 @@ int main(int argc, char **argv)
 
 	node_t *root2;
 
-	FILE *fp2 = fopen("test2.lbc", "r");
+	FILE *fp2 = fopen("test.lbc", "r");
 	
 	root2 = load_graph(fp);
 
