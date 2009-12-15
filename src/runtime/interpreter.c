@@ -478,8 +478,21 @@ node_t *load_graph(FILE *fp)
 int main(int argc, char **argv)
 {
 	initialise_kinds();
+	
+	if(argc != 2) {
+		fprintf(stderr, "Usage: %s file.lbc\n", argv[0]);
+		return 1;
+	}
 
-	symbol_t s1;
+	FILE *fp = fopen(argv[1], "r");
+	node_t *root = load_graph(fp);
+
+	fclose(fp);
+
+	print_node(root);
+
+
+/*	symbol_t s1;
 	s1.type = SYM_OPERATOR;
 	s1.data.sym_operator = OPER_PLUS;
 	s1.kind = 0;
@@ -500,7 +513,6 @@ int main(int argc, char **argv)
 
 	print_node(root);
 
-	FILE *fp = fopen("test.lbc", "w");
 
 	save_graph(fp, root);
 
@@ -547,7 +559,7 @@ int main(int argc, char **argv)
 
 	if(root != NULL) print_node(root);
 
-
+*/
 
 /*
 	node_t *pat = new_node(nodeid(), 1, 0);
