@@ -136,7 +136,7 @@ int assemble(FILE *in, FILE *out)
 	while(fgets(line,1024,in) != NULL) {
 		lineno++;
 
-		if(line[0] == '#') {
+		if(line[0] == '#' || line[0] == '\n') {
 			continue;
 		} else if(!strncmp(line, "push ", 5)) {
 			instr_push(out,line+5);
@@ -150,12 +150,12 @@ int assemble(FILE *in, FILE *out)
 			instr_node(out,line+5);
 		} else if(!strncmp(line, "nodem ", 6)) {
 			instr_nodem(out,line+6);
-		} else if(!strncmp(line, "redex ", 6)) {
-			instr_redex(out,line+6);
-		} else if(!strncmp(line, "reactum ", 8)) {
-			instr_reactum(out,line+8);
-		} else if(!strncmp(line, "reaction ", 9)) {
-			instr_reaction(out,line+9);
+		} else if(!strncmp(line, "redex", 5)) {
+			instr_redex(out,line+5);
+		} else if(!strncmp(line, "reactum", 7)) {
+			instr_reactum(out,line+7);
+		} else if(!strncmp(line, "reaction", 8)) {
+			instr_reaction(out,line+8);
 		} else {
 			fprintf(stderr, "Error: invalid instruction at line %d:\n%s",
 				lineno, line);

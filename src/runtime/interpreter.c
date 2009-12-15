@@ -184,19 +184,7 @@ int match_node(node_t *graph, node_t *pattern)
 {
 	/* populate the "match" field of the pattern */
 	
-	/* Match the root of the pattern first. */
-	if(pattern->symbol.type == SYM_ANY && pattern->num_children == 0) {
-		/* the "anything" node with no children matches any subtree */
-		pattern->match = graph;
-		return TRUE;
-	}
-
 	if(pattern->num_children != graph->num_children) return FALSE;
-
-	if(pattern->symbol.type == SYM_ANY) {
-		pattern->match = graph;
-		return TRUE;
-	}
 
 	if(symbol_compare(pattern->symbol, graph->symbol)) {
 		pattern->match = graph;
@@ -238,13 +226,21 @@ node_t *match_graph_anywhere(node_t *graph, node_t *pattern)
 /* Apply a reactum at the root of graph, returning the rewritten graph. */
 node_t *apply_reactum(node_t *reactum)
 {
+	assert(reactum != NULL);
+
 	// We need to copy the symbol from the original graph before replacing the node.
 	if(reactum->symbol.type == SYM_ANY) {
 		reactum->symbol.type = reactum->match->match->symbol.type;
 		reactum->symbol.data = reactum->match->match->symbol.data;
 	}
 
+	printf("1\n");
+
 	if(reactum->match != NULL && reactum->match->num_children == 0 && reactum->num_children == 0 && reactum->match->match->num_children > 0) {
+
+		assert(reactum->match != NULL);
+		assert(reactum->match->match != NULL);
+
 		printf("APPLY: %ld %ld %ld\n", reactum->match->num_children,
 									reactum->num_children,
 									reactum->match->match->num_children);
@@ -253,24 +249,38 @@ node_t *apply_reactum(node_t *reactum)
 		node_t *newreactum = new_node(nodeid(),
 									reactum->symbol,
 									reactum->match->match->num_children);
+
+		printf("2\n");
+
 		newreactum->match = reactum->match;
+		printf("3\n");
 		int i;
 		for(i=0;i<reactum->match->match->num_children;i++) {
 			newreactum->children[i] = reactum->match->match->children[i];
 		}
 
+		printf("4\n");
 		/*TODO: garbage collect this instead */
 		free(reactum);
 		reactum = newreactum;
 
+		printf("5\n");
 	}
 	
 	reactum->match = NULL;
 
+		printf("6\n");
+
+	assert(reactum != NULL);
+
 	int i = 0;
 	for(i=0; i<reactum->num_children; i++) {
+		printf("6a: %ld (%d)\n", reactum->num_children, i);
+		printf("6aa: %p\n", reactum->children[i]);
 		apply_reactum(reactum->children[i]);
+		printf("6b\n");
 	}
+		printf("7\n");
 
 	return reactum;
 }
@@ -306,7 +316,7 @@ node_t *instantiate_reactum(node_t *reactum)
 
 node_t *apply_reaction(node_t *graph, reaction_t *reaction)
 {
-	node_t *reaction_site = match_graph_anywhere(graph, reaction->redex);
+	node_t *reaction_site = match_graph_anywhere(reaction->scope, reaction->redex);
 
 	/* This rule does not match anywhere in the graph. */
 	if(reaction_site == NULL) {
@@ -339,12 +349,156 @@ node_t *apply_all_reactions(node_t *graph, reaction_t *head)
 	return graph;
 }
 
+/*
+typedef struct reaction_t {
+	const char *name;
+	node_t *redex;
+	node_t *reactum;
+	node_t *scope;
+	long count;
+	struct reaction_t *next;
+} reaction_t;
+*/
+
+reaction_t *collect_reactions(node_t *root)
+{
+	reaction_t *reaction = NULL;
+	int i;
+
+	for(i=0;i<root->num_children;i++) {
+		if(root->children[i]->symbol.kind == KIND_REACTION || 
+				is_kind(root->children[i]->symbol.type, KIND_REACTION)) {
+		
+			reaction_t *rr = reaction;
+
+			if(rr == NULL) {
+				reaction = rr = (reaction_t *)malloc(sizeof(reaction_t));
+			} else {
+				while(rr->next != NULL)
+					rr = rr->next;
+
+				rr->next = (reaction_t *)malloc(sizeof(reaction_t));
+				rr = rr->next;
+				rr->next = NULL;
+			}
+			
+			node_t *rule = root->children[i];
+
+			rr->scope = root;
+			rr->count = 0;
+			rr->name = "RULE";
+
+			int j;
+			for(j = 0; j<rule->num_children; j++) {
+				if(rule->children[j]->symbol.kind == KIND_REDEX ||
+					is_kind(rule->children[j]->symbol.type, KIND_REDEX)) {
+					rr->redex = rule->children[j]->children[0];
+				}
+
+				if(rule->children[j]->symbol.kind == KIND_REACTUM ||
+					is_kind(rule->children[j]->symbol.type, KIND_REACTUM)) {
+					rr->reactum = rule->children[j]->children[0];
+				}
+
+				if(rr->redex != NULL && rr->reactum != NULL) 
+					break;
+			}
+
+			if(rr->redex == NULL || rr->reactum == NULL) {
+				fprintf(stderr, "Error: Incomplete reaction rule.\n");
+				exit(1);
+			}
+		}
+	}
+
+	/* Having collected any rules that are children of this node,
+		   we recurse. */
+
+	for(i=0;i<root->num_children;i++) {
+		reaction_t *res = collect_reactions(root->children[i]);
+
+		if(reaction == NULL)
+			reaction = res;
+		else {
+			reaction_t *rr = reaction;
+			while(rr->next != NULL) 
+				rr = rr->next;
+			rr->next = res;
+		}
+	}
+
+	return reaction;
+}
+
+char *ty_to_string(symbol_type_t t) {
+	switch(t) {
+		case SYM_ANY:
+			return "_";
+			break;
+		case SYM_WORLD:
+			return "world";
+			break;
+		case SYM_OPERATOR:
+			return "operator";
+			break;
+		case SYM_INT:
+			return "int";
+			break;
+		case SYM_IDENT:
+			return "ident";
+			break;
+		case SYM_BOOL:
+			return "bool";
+			break;
+		case SYM_REACTION:
+			return "reaction";
+			break;
+		case SYM_REDEX:
+			return "redex";
+			break;
+		case SYM_REACTUM:
+			return "reactum";
+			break;
+		default: {
+			char b[32];
+			sprintf(b, "type%ld", t);
+			return strdup(b);
+		}
+	}
+}
+
+char *kind_to_string(kind_t k) {
+	switch(k) {
+		case KIND_NODE:
+			return "Node";
+			break;
+		case KIND_COMPUTATION:
+			return "Computation";
+			break;
+		case KIND_VALUE:
+			return "Value";
+			break;
+		case KIND_REACTION:
+			return "Reaction";
+			break;
+		case KIND_REDEX:
+			return "Redex";
+			break;
+		case KIND_REACTUM:
+			return "Reactum";
+			break;
+		default: {
+			char b[32];
+			sprintf(b, "Kind%ld", k);
+			return strdup(b);
+		}
+	}
+}
+
 char *sym_to_string(symbol_t s) 
 {
 	char buf[1024];
 	char tybuf[512];
-
-	if(s.type == SYM_ANY) sprintf(tybuf,"_");
 
 	if(s.type == SYM_OPERATOR) {
 		switch(s.data.sym_operator) {
@@ -363,16 +517,17 @@ char *sym_to_string(symbol_t s)
 			default:
 				sprintf(tybuf,"<?>");
 		}
-	}
-
-	if(s.type == SYM_INT) {
+	} else if(s.type == SYM_INT) {
 		sprintf(tybuf, "%d", s.data.sym_int);
+	} else {
+		sprintf(tybuf, "");
 	}
 
 	if(s.kind != 0) {
-		sprintf(buf, "(%s : %ld :: %ld)", tybuf, s.type, s.kind);
+		sprintf(buf, "(%s : %s :: %s)", tybuf,
+			ty_to_string(s.type), kind_to_string(s.kind));
 	} else {
-		sprintf(buf, "(%s : %ld)", tybuf, s.type);
+		sprintf(buf, "(%s : %s)", tybuf, ty_to_string(s.type));
 	}
 
 	return strdup(buf);
@@ -394,6 +549,53 @@ void print_node(node_t *node) {
 	for(i = 0; i<node->num_children; i++) {
 		print_node(node->children[i]);
 	}
+}
+
+void dot_graph(FILE *fp, node_t *node)
+{
+	if(node->num_children == 0) {
+		fprintf(fp, "cluster_%p [label=\"@%ld %s\"];\n", node, node->node_id, sym_to_string(node->symbol));
+	} else {
+		fprintf(fp, "subgraph cluster_%p {\n", node);
+		fprintf(fp, "label = \"@%ld %s\";\n", node->node_id, sym_to_string(node->symbol));
+
+		int i;
+		for(i=node->num_children-1;i>=0;i--) {
+			dot_graph(fp, node->children[i]);
+		}
+
+		fprintf(fp, "}\n");
+	}
+
+}
+
+void dot_links(FILE *fp, node_t *root)
+{
+	if(root->match != NULL) {
+		fprintf(fp, "cluster_%p -> cluster_%p;\n", root, root->match);
+	}
+
+	int i;
+	for(i=0;i<root->num_children;i++) {
+		dot_links(fp,root->children[i]);
+	}
+
+}
+
+void print_reactions(reaction_t *head)
+{
+	if(head == NULL) return;
+
+	printf("Reaction:\n");
+	printf("\tcount: %ld\n", head->count);
+	printf("\tredex:\n");
+	print_node(head->redex);
+	printf("\treactum:\n");
+	print_node(head->reactum);
+	printf("\tscope:\n");
+	print_node(head->scope);
+
+	print_reactions(head->next);
 }
 
 int save_node(FILE *fp, node_t *root)
@@ -489,8 +691,41 @@ int main(int argc, char **argv)
 
 	fclose(fp);
 
+	printf("Graph:\n");
 	print_node(root);
 
+	char fname[1024];
+	strcpy(fname, argv[1]);
+	strcat(fname, ".dot");
+
+	FILE *dot = fopen(fname, "w");
+	fprintf(dot, "graph G {\nsubgraph cluster_0 {\n");
+	dot_graph(dot, root);
+	//dot_links(dot, root);
+	fprintf(dot, "}\n");
+
+	reaction_t *reactions = collect_reactions(root);
+	printf("\nReactions:\n");
+	print_reactions(reactions);
+
+	int i;
+	for(i=1;i<10;i++) {
+		node_t *newroot = apply_all_reactions(root, reactions);
+		if(newroot != NULL) root = newroot;
+		print_node(root);
+		printf("[iteration %d complete.]\n", i);
+		printf("Graph after iteration %d:\n", i);
+		
+	//	fprintf(dot, "\nsubgraph cluster_%d {\nlabel = \"Iteration %d\";\n", i+1000, i);
+	//	dot_graph(dot, root);
+	//	dot_links(dot, root);
+	//	fprintf(dot, "\n}\n");
+		
+		print_node(root);
+	}
+
+	fprintf(dot, "\n}\n");
+	fclose(dot);
 
 /*	symbol_t s1;
 	s1.type = SYM_OPERATOR;
