@@ -715,12 +715,19 @@ int main(int argc, char **argv)
 		print_node(root);
 		printf("[iteration %d complete.]\n", i);
 		printf("Graph after iteration %d:\n", i);
-		
-	//	fprintf(dot, "\nsubgraph cluster_%d {\nlabel = \"Iteration %d\";\n", i+1000, i);
-	//	dot_graph(dot, root);
-	//	dot_links(dot, root);
-	//	fprintf(dot, "\n}\n");
-		
+
+		char dotfname[1024];
+
+		sprintf(dotfname, "%s.%d.dot", argv[1], i);
+
+		FILE *dotfp2 = fopen(dotfname, "w");
+
+		fprintf(dotfp2, "\ngraph G {\n");
+		dot_graph(dotfp2, root);
+		fprintf(dotfp2, "\n}\n");
+	
+		fclose(dotfp2);
+
 		print_node(root);
 	}
 
